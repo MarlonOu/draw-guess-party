@@ -1,0 +1,142 @@
+[
+  {
+    "id": "w1",
+    "text": "大象",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w2",
+    "text": "企鵝",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w3",
+    "text": "長頸鹿",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w4",
+    "text": "章魚",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w5",
+    "text": "獨角獸",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w6",
+    "text": "披薩",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w7",
+    "text": "壽司",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w8",
+    "text": "鬆餅",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w9",
+    "text": "火鍋",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w10",
+    "text": "腳踏車",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w11",
+    "text": "雨傘",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w12",
+    "text": "眼鏡",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w13",
+    "text": "鬧鐘",
+    "category": "日常物品",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w14",
+    "text": "望遠鏡",
+    "category": "日常物品",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w15",
+    "text": "打鐵趁熱",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w16",
+    "text": "畫蛇添足",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w17",
+    "text": "守株待兔",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w18",
+    "text": "彩虹",
+    "category": "自然現象",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w19",
+    "text": "龍捲風",
+    "category": "自然現象",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w20",
+    "text": "火山爆發",
+    "category": "自然現象",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+]
