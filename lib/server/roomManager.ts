@@ -23,6 +23,12 @@ export interface RoomState {
   status: RoomStatus;
   settings: RoomSettings;
   players: Map<string, RoomPlayer & { socketId: string | null }>;
+  /**
+   * 目前的房主：只有這個人可以改房間設定、在比賽結束畫面選擇先不自動重啟。
+   * 不影響誰能按「開始遊戲」——那個所有人都能按。房主離開時會從剩下的人裡
+   * 隨機重新指派（見 removePlayer），房間不會因此變成沒有房主。
+   */
+  hostPlayerId: string | null;
   currentRoundIndex: number;
   roundCount: number;
   /** DRAW_GUESS 模式使用：本輪正確答案，畫圖者尚未從候選題目中選定時為 null */
@@ -68,8 +74,9 @@ function generateJoinCode(): string {
 
 /**
  * 建立房間。
- * 沒有「房主」這種特殊身分——建立房間的人跟之後加入的人，在房間內完全平權，
- * 唯一差別只是「誰的請求先送到伺服器」這個先後順序，不代表任何權限。
+ * 建立者自動成為房主（見 RoomState.hostPlayerId 的說明）：房主只影響「誰能改房間
+ * 設定、誰能在比賽結束畫面選擇先不自動重啟」，不影響誰能按「開始遊戲」——那個
+ * 房間裡任何人都能按，兩者是分開的權限。
  * 輸入：建立者顯示名稱、遊戲設定
  * 輸出：新建立的 RoomState
  * 邊界條件：加入代碼碰撞時重新產生，直到取得未使用的代碼
@@ -97,6 +104,7 @@ export function createRoom(creatorDisplayName: string, settings: RoomSettings): 
         },
       ],
     ]),
+    hostPlayerId: creatorPlayerId,
     currentRoundIndex: 0,
     roundCount: 0,
     currentWord: null,
@@ -229,6 +237,12 @@ export function removePlayer(
 
   room.players.delete(playerId);
 
+  // 離開的剛好是房主：從剩下的人裡隨機重新指派一位，房間不會因此變成沒有房主
+  if (room.hostPlayerId === playerId && room.players.size > 0) {
+    const remainingIds = Array.from(room.players.keys());
+    room.hostPlayerId = remainingIds[Math.floor(Math.random() * remainingIds.length)];
+  }
+
   const idx = room.turnOrder.indexOf(playerId);
   if (idx !== -1) {
     room.turnOrder.splice(idx, 1);
@@ -270,6 +284,7 @@ export function toRoomSummary(room: RoomState): RoomSummary {
     roundCount: room.roundCount,
     roundPhase: room.roundPhase,
     drawerPlayerId: room.drawerPlayerId,
+    hostPlayerId: room.hostPlayerId,
     nextDrawerPlayerId: getNextDrawerPlayerId(room),
     wordChosen: room.currentWord !== null,
     correctGuesserIds: room.correctGuesses.map((g) => g.playerId),
@@ -523,6 +538,43 @@ export function returnToLobby(room: RoomState): void {
   for (const player of room.players.values()) {
     player.score = 0;
   }
+}
+
+export interface RoomSettingsPatch {
+  roundDurationSec?: number;
+  categoryFilter?: string[];
+  difficultyFilter?: string[];
+}
+
+/**
+ * 修改房間設定（每輪限時、分類篩選、難度篩選）。
+ * 輸入：房間、要求修改的玩家 id、要修改的欄位
+ * 輸出：是否修改成功
+ * 邊界條件：
+ *  - 只有房主可以改，不是房主的請求直接拒絕
+ *  - 只有房間還在 lobby 階段可以改，比賽進行中或已結束時修改設定沒有意義
+ *    （進行中的比賽早就用當初的設定決定好題庫跟輪數了，中途改不會回頭套用）
+ *  - roundDurationSec 限制在 15~180 秒之間，避免被亂改成 0 秒或幾小時這種不合理的值
+ */
+export function updateRoomSettings(
+  room: RoomState,
+  playerId: string,
+  patch: RoomSettingsPatch
+): boolean {
+  if (room.status !== 'lobby') return false;
+  if (playerId !== room.hostPlayerId) return false;
+
+  if (patch.roundDurationSec !== undefined) {
+    const clamped = Math.min(180, Math.max(15, Math.round(patch.roundDurationSec)));
+    room.settings.roundDurationSec = clamped;
+  }
+  if (patch.categoryFilter !== undefined) {
+    room.settings.categoryFilter = patch.categoryFilter.filter((c) => typeof c === 'string');
+  }
+  if (patch.difficultyFilter !== undefined) {
+    room.settings.difficultyFilter = patch.difficultyFilter.filter((d) => typeof d === 'string');
+  }
+  return true;
 }
 
 export function findRoomBySocketId(

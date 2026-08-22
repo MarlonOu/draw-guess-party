@@ -11,6 +11,8 @@ import { BackButton } from '../../../../components/nav/BackButton';
 import { CopyButton } from '../../../../components/room/CopyButton';
 import { StatusOverlay } from '../../../../components/room/StatusOverlay';
 import { StatusIcon } from '../../../../components/room/StatusIcon';
+import { RoomSettingsPanel } from '../../../../components/room/RoomSettingsPanel';
+import { SoundToggleButton } from '../../../../components/room/SoundToggleButton';
 
 interface StoredIdentity {
   displayName: string;
@@ -40,7 +42,18 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
     startGame,
     sendMessage,
     chooseWord,
+    updateSettings,
+    cancelAutoRestart,
   } = useRoomSocket();
+
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/api/word-categories')
+      .then((res) => res.json())
+      .then((data) => setCategories(data.categories ?? []))
+      .catch(() => setCategories([]));
+  }, []);
 
   const [color, setColor] = useState('#1A1A2E');
   const [width, setWidth] = useState(6);
@@ -48,6 +61,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
   const canvasHandleRef = useRef<DrawingCanvasHandle>(null);
 
   const [timeLeftSec, setTimeLeftSec] = useState<number | null>(null);
+  const [selectionCountdown, setSelectionCountdown] = useState<number | null>(null);
   const [revealCountdown, setRevealCountdown] = useState<number | null>(null);
   const [restartCountdown, setRestartCountdown] = useState<number | null>(null);
   const [pageUrl, setPageUrl] = useState('');
@@ -94,11 +108,13 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
     }
   }, [roundStartInfo]);
 
-  // 倒數橫條：每次新的一輪開始（roundStartInfo 換成新物件）就重新從限時秒數倒數，
+  // 倒數橫條：不是 round:start 一送出就開始，而是等 room.wordChosen 從 false 變 true
+  // （選題完成，不管是畫圖者主動選、還是選題逾時自動保底選）才開始從限時秒數倒數。
+  // 選題階段跟作畫階段是分開計時的兩段時間，橫條只代表作畫階段那一段。
   // 前端本地倒數、不逐秒跟伺服器對時，跟伺服器實際逾時的時間點會有些微誤差，
   // 一般網路延遲下感覺不出來。
   useEffect(() => {
-    if (!roundStartInfo) {
+    if (!room?.wordChosen || !roundStartInfo) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- 依外部事件（新一輪開始/結束）同步本地倒數狀態，非衍生渲染狀態
       setTimeLeftSec(null);
       return;
@@ -108,7 +124,22 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
       setTimeLeftSec((prev) => (prev === null ? null : Math.max(0, prev - 1)));
     }, 1000);
     return () => clearInterval(interval);
-  }, [roundStartInfo]);
+  }, [room?.wordChosen, roundStartInfo]);
+
+  // 選題倒數：畫圖者看到候選題目那一刻開始算，固定 5 秒（跟伺服器的 SELECTION_TIMEOUT_MS
+  // 一致），純粹是給畫圖者一個視覺提示，實際逾時判定以伺服器為準
+  useEffect(() => {
+    if (wordOptions.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 依外部事件同步本地倒數狀態，非衍生渲染狀態
+      setSelectionCountdown(null);
+      return;
+    }
+    setSelectionCountdown(5);
+    const interval = setInterval(() => {
+      setSelectionCountdown((prev) => (prev === null ? null : Math.max(0, prev - 1)));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [wordOptions]);
 
   // 公布答案倒數：跟伺服器排程的「停留幾秒後自動下一輪」保持同步的估計值
   useEffect(() => {
@@ -225,6 +256,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
   }
 
   const isDrawer = myPlayerId !== null && myPlayerId === room.drawerPlayerId;
+  const isHost = myPlayerId !== null && myPlayerId === room.hostPlayerId;
   const connectedPlayerCount = room.players.filter((p) => p.connected).length;
   const drawerName = room.players.find((p) => p.id === room.drawerPlayerId)?.displayName;
 
@@ -249,59 +281,59 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
   else if (isWaitingForOthersToChoose) overlayKind = 'waitingForChoice';
 
   const showTimerBar =
-    room.status === 'playing' && room.roundPhase === 'drawing' && !roundEndInfo;
+    room.status === 'playing' && room.roundPhase === 'drawing' && room.wordChosen && !roundEndInfo;
 
   return (
-    <main style={{ maxWidth: 1000, margin: '0 auto', padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ marginBottom: 10 }}>
-            <BackButton href="/online" label="線上模式" onBeforeLeave={leaveRoom} />
-          </div>
-          <p className="dg-eyebrow">房間代碼</p>
-          <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: '0.06em' }}>
+    <main style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <BackButton href="/online" label="線上模式" onBeforeLeave={leaveRoom} />
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <p className="dg-eyebrow" style={{ margin: 0 }}>房間代碼</p>
+          <h1 style={{ fontSize: 20, fontWeight: 900, letterSpacing: '0.06em', margin: 0 }}>
             {room.joinCode}
           </h1>
         </div>
-      </div>
-
-      {room.status === 'playing' && (
-        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span className="dg-tag">
-            第 {room.currentRoundIndex + 1} / {room.roundCount} 輪
-          </span>
-          {!overlayKind && (
-            <span
-              className="dg-tag"
-              style={{
-                background: isDrawer ? 'var(--accent)' : 'var(--blue-soft)',
-                color: isDrawer ? '#fff' : 'var(--ink)',
-                fontWeight: 700,
-              }}
-            >
-              {isDrawer ? `你正在畫：${wordForDrawer ?? ''}` : `${drawerName ?? '有人'} 正在畫圖`}
+        {room.status === 'playing' && (
+          <>
+            <span className="dg-tag">
+              第 {room.currentRoundIndex + 1} / {room.roundCount} 輪
             </span>
-          )}
-          {overlayKind === 'waitingForChoice' && (
-            <span className="dg-tag" style={{ background: 'var(--blue-soft)', fontWeight: 700 }}>
-              {drawerName ?? '有人'} 正在選題
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* 固定高度的預留區塊，避免倒數橫條出現/消失時整個版面上下跳動 */}
-      <div style={{ marginTop: 10, minHeight: 54 }}>
-        {showTimerBar && timeLeftSec !== null && (
-          <RoundTimer
-            remainingSec={timeLeftSec}
-            timeLimitSec={roundStartInfo?.roundDurationSec ?? 1}
-          />
+            {!overlayKind && (
+              <span
+                className="dg-tag"
+                style={{
+                  background: isDrawer ? 'var(--accent)' : 'var(--blue-soft)',
+                  color: isDrawer ? '#fff' : 'var(--ink)',
+                  fontWeight: 700,
+                }}
+              >
+                {isDrawer ? `你正在畫：${wordForDrawer ?? ''}` : `${drawerName ?? '有人'} 正在畫圖`}
+              </span>
+            )}
+            {overlayKind === 'waitingForChoice' && (
+              <span className="dg-tag" style={{ background: 'var(--blue-soft)', fontWeight: 700 }}>
+                {drawerName ?? '有人'} 正在選題
+              </span>
+            )}
+          </>
         )}
+        <div style={{ flex: 1, minWidth: 8 }} />
+        <SoundToggleButton />
       </div>
 
-      <div style={{ display: 'flex', gap: 20, marginTop: 2, flexWrap: 'wrap' }}>
-        <div style={{ flex: '2 1 480px', minWidth: 280, display: 'flex', gap: 10 }}>
+      {/* 計時橫條永遠掛載在畫面上，只用 visibility 切換可見度（不是條件渲染整個元件）。
+          這樣它佔用的空間永遠是它「實際」的渲染高度本身，不需要另外用 minHeight 猜一個
+          數字去預留空間——猜的數字只要跟實際渲染高度差一點點，出現/消失時就會跳動，
+          這個做法從根本上排除了「猜錯」的可能性。 */}
+      <div style={{ marginTop: 10, visibility: showTimerBar && timeLeftSec !== null ? 'visible' : 'hidden' }}>
+        <RoundTimer
+          remainingSec={timeLeftSec ?? 0}
+          timeLimitSec={roundStartInfo?.roundDurationSec ?? 1}
+        />
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Toolbar
             color={color}
             width={width}
@@ -317,8 +349,8 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
           <div
             style={{
               position: 'relative',
-              flex: 1,
-              aspectRatio: '4 / 3',
+              width: 'clamp(260px, 40vw, 820px)',
+              aspectRatio: '8 / 5',
               borderRadius: 'var(--radius-md)',
               border: '2px solid var(--ink)',
               boxShadow: 'var(--shadow-md)',
@@ -360,6 +392,14 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
                     </div>
                   )}
                 </div>
+
+                <RoomSettingsPanel
+                  settings={room.settings}
+                  categories={categories}
+                  isHost={isHost}
+                  onUpdate={updateSettings}
+                />
+
                 {connectedPlayerCount >= 2 ? (
                   <button
                     type="button"
@@ -390,7 +430,9 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
                     </button>
                   ))}
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>時間持續倒數中，快選一個</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
+                  {selectionCountdown ?? 5} 秒內快選一個，超過會自動幫你選
+                </p>
               </StatusOverlay>
             )}
 
@@ -483,9 +525,21 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
                 </div>
                 <p style={{ color: 'var(--ink-soft)', fontSize: 13 }}>完整排名請見右側玩家清單</p>
                 {restartCountdown !== null ? (
-                  <p className="dg-tag" style={{ background: 'var(--blue-soft)', fontWeight: 800 }}>
-                    {restartCountdown} 秒後開始新的一場比賽
-                  </p>
+                  <>
+                    <p className="dg-tag" style={{ background: 'var(--blue-soft)', fontWeight: 800 }}>
+                      {restartCountdown} 秒後開始新的一場比賽
+                    </p>
+                    {isHost && (
+                      <button
+                        type="button"
+                        onClick={cancelAutoRestart}
+                        className="dg-btn"
+                        style={{ padding: '8px 16px', fontSize: 13 }}
+                      >
+                        先不要開始，調整設定
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>等待更多玩家加入才能開始新的一場</p>
                 )}
@@ -494,23 +548,30 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
           </div>
         </div>
 
-        <div style={{ flex: '1 1 260px', minWidth: 240 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>
-            玩家（{room.players.length}）
-          </h2>
-          <PlayerList
-            players={room.players}
-            drawerPlayerId={room.drawerPlayerId}
-            nextDrawerPlayerId={room.status === 'playing' ? room.nextDrawerPlayerId : null}
-            correctGuesserIds={room.correctGuesserIds}
-          />
+        <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div style={{ flex: '2 1 220px', minWidth: 200, maxWidth: 300 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>
+              玩家（{room.players.length}）
+            </h2>
+            <PlayerList
+              players={room.players}
+              drawerPlayerId={room.drawerPlayerId}
+              nextDrawerPlayerId={room.status === 'playing' ? room.nextDrawerPlayerId : null}
+              correctGuesserIds={room.correctGuesserIds}
+              hostPlayerId={room.hostPlayerId}
+              maxHeight={240}
+            />
+          </div>
 
-          <h2 style={{ fontSize: 15, fontWeight: 800, margin: '16px 0 8px' }}>猜題聊天室</h2>
-          <GuessChatBox
-            messages={messages}
-            onSend={sendMessage}
-            disabled={isDrawer && room.status === 'playing' && room.roundPhase === 'drawing'}
-          />
+          <div style={{ flex: '3 1 320px', minWidth: 260 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>猜題聊天室</h2>
+            <GuessChatBox
+              messages={messages}
+              onSend={sendMessage}
+              disabled={isDrawer && room.status === 'playing' && room.roundPhase === 'drawing'}
+              maxHeight={240}
+            />
+          </div>
         </div>
       </div>
     </main>

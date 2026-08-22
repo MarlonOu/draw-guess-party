@@ -14,6 +14,10 @@ interface StatusOverlayProps {
  * 畫布疊層通知的統一外殼：圖示 + 標題 + 內容，所有「遊戲關鍵通知」
  * （尚未開始、選題中、等待選題、公布答案、比賽結束）都套用同一套版型，
  * 只是圖示種類、圖示底色、標題文字、內容不同，確保視覺語言一致。
+ *
+ * `overflowY: 'auto'` 是最後一道防線：畫布在窄螢幕下可能只有一兩百 px 高，
+ * 如果內容（例如房主的房間設定面板）真的多到連疊層本身都放不下，寧可讓疊層
+ * 自己出現捲軸，也不要讓內容整個溢出畫布邊界、蓋到畫布外的其他元件。
  */
 export function StatusOverlay({ icon, iconColor, title, children }: StatusOverlayProps) {
   return (
@@ -29,6 +33,7 @@ export function StatusOverlay({ icon, iconColor, title, children }: StatusOverla
         gap: 14,
         padding: 24,
         textAlign: 'center',
+        overflowY: 'auto',
       }}
     >
       <StatusIcon kind={icon} color={iconColor} />

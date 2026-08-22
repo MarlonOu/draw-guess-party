@@ -1,10 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSocket } from './socketClient';
 import type { RoomSummary } from '../types/room';
 import type { GuessMessage } from '../types/round';
 import type { WordOption } from '../types/events';
+import {
+  playPlayerJoinSound,
+  playPlayerLeaveSound,
+  playWordChosenSound,
+  playCorrectGuessSound,
+  playAllCorrectSound,
+  playPartialRoundEndSound,
+  playForfeitSound,
+} from '../audio/soundEffects';
 
 interface RoundEndInfo {
   roundIndex: number;
@@ -42,12 +51,40 @@ export function useRoomSocket() {
   const [nextMatchInSec, setNextMatchInSec] = useState<number | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
 
+  /**
+   * 用來偵測「跟上一次相比發生了什麼變化」的參照值，不是拿來畫面渲染用的狀態
+   * （所以用 ref 不用 state），純粹給音效判斷用：
+   *  - previousPlayerIdsRef 為 null 代表「這個分頁還沒收過任何一次 room:state」，
+   *    這種情況不比對、不觸發加入/離開音效，避免把首次載入時房間裡本來就有的人
+   *    誤判成「剛剛才加入」。
+   *  - previousWordChosenRef 用來偵測 wordChosen 從 false 變 true 的那個瞬間
+   *    （選題完成），這個轉變本身才是音效觸發點，不是每次 room:state 都響。
+   */
+  const previousPlayerIdsRef = useRef<Set<string> | null>(null);
+  const previousWordChosenRef = useRef(false);
+
   useEffect(() => {
     const socket = getSocket();
 
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
     const onRoomState = (payload: RoomSummary) => {
+      const newIds = new Set(payload.players.map((p) => p.id));
+
+      if (previousPlayerIdsRef.current !== null) {
+        const prevIds = previousPlayerIdsRef.current;
+        const someoneJoined = payload.players.some((p) => !prevIds.has(p.id));
+        const someoneLeft = Array.from(prevIds).some((id) => !newIds.has(id));
+        if (someoneJoined) playPlayerJoinSound();
+        if (someoneLeft) playPlayerLeaveSound();
+
+        if (!previousWordChosenRef.current && payload.wordChosen) {
+          playWordChosenSound();
+        }
+      }
+      previousPlayerIdsRef.current = newIds;
+      previousWordChosenRef.current = payload.wordChosen;
+
       setRoom(payload);
       // 房間狀態一旦離開 finished（例如自動回到 lobby 等待更多人加入），前端也要
       // 跟著清掉「比賽結束」的畫面狀態，不然疊層會照樣顯示 finished 疊層，因為
@@ -58,8 +95,12 @@ export function useRoomSocket() {
       }
     };
     const onRoomError = (payload: { message: string }) => setError(payload.message);
-    const onChatMessage = (payload: GuessMessage) =>
+    const onChatMessage = (payload: GuessMessage) => {
       setMessages((prev) => [...prev, payload]);
+      if (payload.isCorrectGuess) {
+        playCorrectGuessSound();
+      }
+    };
     const onRoundStart = (payload: RoundStartInfo & { wordOptions?: WordOption[] }) => {
       setRoundStartInfo(payload);
       setWordOptions(payload.wordOptions ?? []);
@@ -76,6 +117,20 @@ export function useRoomSocket() {
       setRoundEndInfo(payload);
       setWordOptions([]);
       setWordForDrawer(null);
+
+      // 音效判斷：畫圖者不算猜題者，所以應該要猜的人數 = 房間目前人數 - 1（畫圖者本人）。
+      // previousPlayerIdsRef 這時候已經是最新的房間名單（room:state 一定比 round:end
+      // 先送到，見 roundOrchestrator.ts 的 endRoundAndAdvance），用它的數量做近似判斷。
+      const totalGuessers = previousPlayerIdsRef.current
+        ? Math.max(0, previousPlayerIdsRef.current.size - 1)
+        : 0;
+      if (payload.correctGuesses.length === 0) {
+        playForfeitSound();
+      } else if (totalGuessers > 0 && payload.correctGuesses.length >= totalGuessers) {
+        playAllCorrectSound();
+      } else {
+        playPartialRoundEndSound();
+      }
     };
     const onGameFinished = (payload: { nextMatchInSec: number | null }) => {
       setGameFinished(true);
@@ -130,6 +185,17 @@ export function useRoomSocket() {
     getSocket().emit('round:chooseWord', { wordId });
   }, []);
 
+  const updateSettings = useCallback(
+    (patch: { roundDurationSec?: number; categoryFilter?: string[]; difficultyFilter?: string[] }) => {
+      getSocket().emit('room:updateSettings', patch);
+    },
+    []
+  );
+
+  const cancelAutoRestart = useCallback(() => {
+    getSocket().emit('room:cancelAutoRestart');
+  }, []);
+
   return {
     connected,
     room,
@@ -147,5 +213,7 @@ export function useRoomSocket() {
     startGame,
     sendMessage,
     chooseWord,
+    updateSettings,
+    cancelAutoRestart,
   };
 }

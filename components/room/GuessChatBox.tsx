@@ -8,12 +8,14 @@ interface GuessChatBoxProps {
   onSend: (text: string) => void;
   /** 畫圖者本人在自己的回合裡不能打字（避免用聊天文字提示答案），由 RoomPage 判斷後傳入 */
   disabled?: boolean;
+  /** 整個聊天卡片（含輸入框）的固定高度，預設 320；跟玩家清單並排時可調整成一致高度 */
+  maxHeight?: number;
 }
 
 /** 判定「使用者是否已經把聊天室捲到底」用的容許誤差（px） */
 const BOTTOM_THRESHOLD = 40;
 
-export function GuessChatBox({ messages, onSend, disabled = false }: GuessChatBoxProps) {
+export function GuessChatBox({ messages, onSend, disabled = false, maxHeight = 320 }: GuessChatBoxProps) {
   const [value, setValue] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   /** 記錄「使用者上次手動捲動後，是否已經在底部」，只有這樣才在新訊息進來時自動幫忙捲到底；
@@ -42,7 +44,10 @@ export function GuessChatBox({ messages, onSend, disabled = false }: GuessChatBo
   };
 
   return (
-    <div className="dg-card" style={{ display: 'flex', flexDirection: 'column', height: 320 }}>
+    <div
+      className="dg-card"
+      style={{ display: 'flex', flexDirection: 'column', height: maxHeight, overflow: 'hidden' }}
+    >
       <div ref={listRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
         {messages.length === 0 && (
           <p style={{ color: 'var(--ink-soft)', fontSize: 13 }}>還沒有人發言，搶頭香吧</p>

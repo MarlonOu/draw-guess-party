@@ -12,6 +12,14 @@ export interface ClientToServerEvents {
   'room:join': (payload: { joinCode: string; displayName: string; playerId?: string }) => void;
   'room:leave': () => void;
   'room:start': () => void;
+  /** 只有房主的請求會生效，其他人的請求伺服器直接忽略（不特別回錯誤，避免洩漏誰是房主的猜測空間有意義的訊號） */
+  'room:updateSettings': (payload: {
+    roundDurationSec?: number;
+    categoryFilter?: string[];
+    difficultyFilter?: string[];
+  }) => void;
+  /** 比賽結束畫面，房主選擇「先不要自動開始下一場」，改回 lobby 讓大家調整設定 */
+  'room:cancelAutoRestart': () => void;
   /** 畫圖者從 round:start 私訊拿到的兩個候選題目中選一個 */
   'round:chooseWord': (payload: { wordId: string }) => void;
 

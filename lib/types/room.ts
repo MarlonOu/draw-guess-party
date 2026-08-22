@@ -25,6 +25,13 @@ export interface RoomSummary {
   roundCount: number;
   roundPhase: RoundPhase | null;
   drawerPlayerId: string | null;
+  /**
+   * 目前的房主，只有這個人可以修改房間設定（分類、難度、每輪限時）、
+   * 以及在比賽結束畫面選擇「先不要自動開始下一場」。不影響「開始遊戲」按鈕——
+   * 那個任何人都能按，房主身分只管房間設定這一塊。房主離開房間時會自動從
+   * 剩下的人裡隨機挑一位頂替，房間不會因此變成沒有房主。
+   */
+  hostPlayerId: string | null;
   /** 下一位輪到畫圖的玩家 id；比賽尚未開始（turnOrder 還沒決定）時為 null */
   nextDrawerPlayerId: string | null;
   /**

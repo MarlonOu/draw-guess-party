@@ -18,6 +18,10 @@ import { wordRepository } from '../repository/wordRepository';
 const ROUND_END_PAUSE_SEC = 5;
 const ROUND_END_PAUSE_MS = ROUND_END_PAUSE_SEC * 1000;
 
+/** 選題限時：固定 5 秒，跟作畫限時（roundDurationSec，房間設定可調）分開計算，
+ *  超過沒選就自動保底選一個，確保不會有人一直卡在選題畫面拖時間 */
+const SELECTION_TIMEOUT_MS = 5_000;
+
 /** joinCode -> 目前排程中的計時器（回合限時、公布答案後的停留、或整場結束後的重啟），同一房間同時只會有一個 */
 const roomTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -30,7 +34,10 @@ function clearRoomTimer(joinCode: string) {
 }
 
 /**
- * 開始下一輪：抽出候選題目、指定畫圖者，並排程本輪的限時計時器
+ * 開始下一輪：抽出候選題目、指定畫圖者，並排程「選題限時」（固定 5 秒，見
+ * SELECTION_TIMEOUT_MS）。真正的作畫限時（roundDurationSec，房間設定可調）要等
+ * 選題完成（畫圖者主動選、或選題逾時自動保底選）之後才開始算，兩段時間互不影響——
+ * 之前的版本選題跟作畫共用同一個計時器，選題拖越久留給作畫的時間就越少，這裡拆開。
  * 候選題目只透過私訊（`io.to(socketId)`）送給畫圖者，廣播給全房間的 `round:start` 不含題目內容
  */
 export async function beginRound(io: Server, room: RoomState): Promise<void> {
@@ -68,12 +75,32 @@ export async function beginRound(io: Server, room: RoomState): Promise<void> {
     });
   }
 
-  const timer = setTimeout(() => {
-    // 時間到了但畫圖者還沒選題（例如根本沒點選項）時，自動保底選一個，確保一定有答案可以公布
-    autoPickPendingWordIfNeeded(room);
+  const selectionTimer = setTimeout(() => {
+    // 選題逾時（5 秒）畫圖者還沒選，自動保底選候選清單的第一個，直接進入作畫階段。
+    // 一定要私訊通知畫圖者選到了什麼字——不然畫圖者的畫面永遠不知道題目是什麼，
+    // 畫布權限判斷（前端的 canDrawNow 要求拿到題目文字才解鎖）就會卡死在「未解鎖」
+    // 狀態，即使伺服器這邊其實已經准許他畫了。這是先前版本漏掉的地方。
+    const autoWord = autoPickPendingWordIfNeeded(room);
+    if (autoWord && drawer?.socketId) {
+      io.to(drawer.socketId).emit('round:wordChosen', { word: autoWord });
+    }
+    startDrawingPhase(io, room);
+  }, SELECTION_TIMEOUT_MS);
+  roomTimers.set(room.joinCode, selectionTimer);
+}
+
+/**
+ * 選題完成（不管是畫圖者主動選、還是選題逾時自動保底選），正式進入作畫階段：
+ * 廣播一次房間狀態（`wordChosen` 這時候會是 true，前端據此才開始顯示倒數橫條），
+ * 並排程真正的作畫限時計時器（房間設定的 roundDurationSec）。
+ */
+export function startDrawingPhase(io: Server, room: RoomState): void {
+  io.to(room.joinCode).emit('room:state', toRoomSummary(room));
+
+  const drawingTimer = setTimeout(() => {
     void endRoundAndAdvance(io, room);
   }, room.settings.roundDurationSec * 1000);
-  roomTimers.set(room.joinCode, timer);
+  roomTimers.set(room.joinCode, drawingTimer);
 }
 
 /**

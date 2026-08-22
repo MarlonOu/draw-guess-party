@@ -22,120 +22,2080 @@
   },
   {
     "id": "w4",
+    "text": "貓咪",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w5",
+    "text": "小狗",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w6",
+    "text": "兔子",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w7",
+    "text": "烏龜",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w8",
+    "text": "金魚",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w9",
+    "text": "老虎",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w10",
+    "text": "獅子",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w11",
+    "text": "熊貓",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w12",
+    "text": "猴子",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w13",
+    "text": "青蛙",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w14",
+    "text": "鴨子",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w15",
+    "text": "綿羊",
+    "category": "動物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w16",
     "text": "章魚",
     "category": "動物",
     "difficulty": "MEDIUM",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w5",
+    "id": "w17",
     "text": "獨角獸",
     "category": "動物",
     "difficulty": "MEDIUM",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w6",
+    "id": "w18",
+    "text": "鱷魚",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w19",
+    "text": "刺蝟",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w20",
+    "text": "水母",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w21",
+    "text": "犀牛",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w22",
+    "text": "駱駝",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w23",
+    "text": "袋鼠",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w24",
+    "text": "蝙蝠",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w25",
+    "text": "孔雀",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w26",
+    "text": "變色龍",
+    "category": "動物",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w27",
+    "text": "食蟻獸",
+    "category": "動物",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w28",
+    "text": "海馬",
+    "category": "動物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w29",
     "text": "披薩",
     "category": "食物",
     "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w7",
+    "id": "w30",
     "text": "壽司",
     "category": "食物",
     "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w8",
+    "id": "w31",
+    "text": "漢堡",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w32",
+    "text": "蛋糕",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w33",
+    "text": "冰淇淋",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w34",
+    "text": "麵包",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w35",
+    "text": "餃子",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w36",
+    "text": "荷包蛋",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w37",
+    "text": "蘋果",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w38",
+    "text": "香蕉",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w39",
     "text": "鬆餅",
     "category": "食物",
     "difficulty": "MEDIUM",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w9",
+    "id": "w40",
     "text": "火鍋",
     "category": "食物",
     "difficulty": "MEDIUM",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w10",
+    "id": "w41",
+    "text": "三明治",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w42",
+    "text": "爆米花",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w43",
+    "text": "甜甜圈",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w44",
+    "text": "珍珠奶茶",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w45",
+    "text": "關東煮",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w46",
+    "text": "熱狗",
+    "category": "食物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w47",
+    "text": "蛋捲",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w48",
+    "text": "湯圓",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w49",
+    "text": "生日蛋糕",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w50",
+    "text": "棉花糖",
+    "category": "食物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w51",
+    "text": "提拉米蘇",
+    "category": "食物",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w52",
     "text": "腳踏車",
     "category": "日常物品",
     "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w11",
+    "id": "w53",
     "text": "雨傘",
     "category": "日常物品",
     "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w12",
+    "id": "w54",
     "text": "眼鏡",
     "category": "日常物品",
     "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w13",
+    "id": "w55",
     "text": "鬧鐘",
     "category": "日常物品",
     "difficulty": "MEDIUM",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w14",
+    "id": "w56",
     "text": "望遠鏡",
     "category": "日常物品",
     "difficulty": "HARD",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w15",
-    "text": "打鐵趁熱",
-    "category": "成語",
-    "difficulty": "HARD",
+    "id": "w57",
+    "text": "剪刀",
+    "category": "日常物品",
+    "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w16",
-    "text": "畫蛇添足",
-    "category": "成語",
-    "difficulty": "HARD",
+    "id": "w58",
+    "text": "鑰匙",
+    "category": "日常物品",
+    "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w17",
-    "text": "守株待兔",
-    "category": "成語",
-    "difficulty": "HARD",
+    "id": "w59",
+    "text": "燈泡",
+    "category": "日常物品",
+    "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w18",
+    "id": "w60",
+    "text": "枕頭",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w61",
+    "text": "鏡子",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w62",
+    "text": "行李箱",
+    "category": "日常物品",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w63",
+    "text": "背包",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w64",
+    "text": "手電筒",
+    "category": "日常物品",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w65",
+    "text": "水壺",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w66",
+    "text": "手錶",
+    "category": "日常物品",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w67",
+    "text": "插座",
+    "category": "日常物品",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w68",
+    "text": "垃圾桶",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w69",
+    "text": "衣架",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w70",
+    "text": "牙刷",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w71",
+    "text": "肥皂",
+    "category": "日常物品",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w72",
+    "text": "指南針",
+    "category": "日常物品",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w73",
+    "text": "放大鏡",
+    "category": "日常物品",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w74",
+    "text": "釘書機",
+    "category": "日常物品",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w75",
     "text": "彩虹",
     "category": "自然現象",
     "difficulty": "EASY",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w19",
+    "id": "w76",
     "text": "龍捲風",
     "category": "自然現象",
     "difficulty": "MEDIUM",
     "createdAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "id": "w20",
+    "id": "w77",
     "text": "火山爆發",
     "category": "自然現象",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w78",
+    "text": "閃電",
+    "category": "自然現象",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w79",
+    "text": "雪花",
+    "category": "自然現象",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w80",
+    "text": "日出",
+    "category": "自然現象",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w81",
+    "text": "瀑布",
+    "category": "自然現象",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w82",
+    "text": "地震",
+    "category": "自然現象",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w83",
+    "text": "海嘯",
+    "category": "自然現象",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w84",
+    "text": "極光",
+    "category": "自然現象",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w85",
+    "text": "雲朵",
+    "category": "自然現象",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w86",
+    "text": "露珠",
+    "category": "自然現象",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w87",
+    "text": "霧",
+    "category": "自然現象",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w88",
+    "text": "流星",
+    "category": "自然現象",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w89",
+    "text": "打鐵趁熱",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w90",
+    "text": "畫蛇添足",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w91",
+    "text": "守株待兔",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w92",
+    "text": "井底之蛙",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w93",
+    "text": "對牛彈琴",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w94",
+    "text": "狐假虎威",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w95",
+    "text": "葉公好龍",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w96",
+    "text": "畫龍點睛",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w97",
+    "text": "龜兔賽跑",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w98",
+    "text": "殺雞儆猴",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w99",
+    "text": "破釜沉舟",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w100",
+    "text": "班門弄斧",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w101",
+    "text": "掩耳盜鈴",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w102",
+    "text": "盲人摸象",
+    "category": "成語",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w103",
+    "text": "醫生",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w104",
+    "text": "老師",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w105",
+    "text": "警察",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w106",
+    "text": "消防員",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w107",
+    "text": "廚師",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w108",
+    "text": "農夫",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w109",
+    "text": "郵差",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w110",
+    "text": "理髮師",
+    "category": "職業",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w111",
+    "text": "畫家",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w112",
+    "text": "歌手",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w113",
+    "text": "科學家",
+    "category": "職業",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w114",
+    "text": "太空人",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w115",
+    "text": "飛行員",
+    "category": "職業",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w116",
+    "text": "水電工",
+    "category": "職業",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w117",
+    "text": "園丁",
+    "category": "職業",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w118",
+    "text": "攝影師",
+    "category": "職業",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w119",
+    "text": "建築師",
+    "category": "職業",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w120",
+    "text": "魔術師",
+    "category": "職業",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w121",
+    "text": "籃球",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w122",
+    "text": "足球",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w123",
+    "text": "棒球",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w124",
+    "text": "游泳",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w125",
+    "text": "跑步",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w126",
+    "text": "桌球",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w127",
+    "text": "羽毛球",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w128",
+    "text": "排球",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w129",
+    "text": "溜冰",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w130",
+    "text": "滑雪",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w131",
+    "text": "拳擊",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w132",
+    "text": "瑜珈",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w133",
+    "text": "舉重",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w134",
+    "text": "射箭",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w135",
+    "text": "騎馬",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w136",
+    "text": "衝浪",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w137",
+    "text": "攀岩",
+    "category": "運動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w138",
+    "text": "跳繩",
+    "category": "運動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w139",
+    "text": "汽車",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w140",
+    "text": "公車",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w141",
+    "text": "火車",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w142",
+    "text": "飛機",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w143",
+    "text": "船",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w144",
+    "text": "摩托車",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w145",
+    "text": "熱氣球",
+    "category": "交通工具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w146",
+    "text": "直升機",
+    "category": "交通工具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w147",
+    "text": "潛水艇",
+    "category": "交通工具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w148",
+    "text": "計程車",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w149",
+    "text": "消防車",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w150",
+    "text": "救護車",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w151",
+    "text": "太空梭",
+    "category": "交通工具",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w152",
+    "text": "纜車",
+    "category": "交通工具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w153",
+    "text": "獨木舟",
+    "category": "交通工具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w154",
+    "text": "滑板",
+    "category": "交通工具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w155",
+    "text": "拖車",
+    "category": "交通工具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w156",
+    "text": "沙發",
+    "category": "家具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w157",
+    "text": "書桌",
+    "category": "家具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w158",
+    "text": "椅子",
+    "category": "家具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w159",
+    "text": "床",
+    "category": "家具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w160",
+    "text": "書櫃",
+    "category": "家具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w161",
+    "text": "衣櫃",
+    "category": "家具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w162",
+    "text": "餐桌",
+    "category": "家具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w163",
+    "text": "搖椅",
+    "category": "家具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w164",
+    "text": "吊床",
+    "category": "家具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w165",
+    "text": "屏風",
+    "category": "家具",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w166",
+    "text": "鞋櫃",
+    "category": "家具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w167",
+    "text": "梳妝台",
+    "category": "家具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w168",
+    "text": "躺椅",
+    "category": "家具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w169",
+    "text": "嬰兒床",
+    "category": "家具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w170",
+    "text": "電視",
+    "category": "電器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w171",
+    "text": "冰箱",
+    "category": "電器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w172",
+    "text": "洗衣機",
+    "category": "電器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w173",
+    "text": "微波爐",
+    "category": "電器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w174",
+    "text": "電風扇",
+    "category": "電器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w175",
+    "text": "吹風機",
+    "category": "電器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w176",
+    "text": "烤麵包機",
+    "category": "電器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w177",
+    "text": "吸塵器",
+    "category": "電器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w178",
+    "text": "冷氣機",
+    "category": "電器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w179",
+    "text": "電鍋",
+    "category": "電器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w180",
+    "text": "咖啡機",
+    "category": "電器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w181",
+    "text": "果汁機",
+    "category": "電器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w182",
+    "text": "電暖器",
+    "category": "電器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w183",
+    "text": "除濕機",
+    "category": "電器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w184",
+    "text": "帽子",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w185",
+    "text": "襪子",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w186",
+    "text": "手套",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w187",
+    "text": "圍巾",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w188",
+    "text": "領帶",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w189",
+    "text": "項鍊",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w190",
+    "text": "耳環",
+    "category": "服飾配件",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w191",
+    "text": "皮帶",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w192",
+    "text": "高跟鞋",
+    "category": "服飾配件",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w193",
+    "text": "雨鞋",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w194",
+    "text": "太陽眼鏡",
+    "category": "服飾配件",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w195",
+    "text": "背心",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w196",
+    "text": "斗篷",
+    "category": "服飾配件",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w197",
+    "text": "口罩",
+    "category": "服飾配件",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w198",
+    "text": "鋼琴",
+    "category": "樂器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w199",
+    "text": "吉他",
+    "category": "樂器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w200",
+    "text": "小提琴",
+    "category": "樂器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w201",
+    "text": "鼓",
+    "category": "樂器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w202",
+    "text": "長笛",
+    "category": "樂器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w203",
+    "text": "薩克斯風",
+    "category": "樂器",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w204",
+    "text": "喇叭",
+    "category": "樂器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w205",
+    "text": "直笛",
+    "category": "樂器",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w206",
+    "text": "手風琴",
+    "category": "樂器",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w207",
+    "text": "三角鐵",
+    "category": "樂器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w208",
+    "text": "豎琴",
+    "category": "樂器",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w209",
+    "text": "城堡",
+    "category": "建築地標",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w210",
+    "text": "燈塔",
+    "category": "建築地標",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w211",
+    "text": "橋樑",
+    "category": "建築地標",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w212",
+    "text": "金字塔",
+    "category": "建築地標",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w213",
+    "text": "風車",
+    "category": "建築地標",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w214",
+    "text": "教堂",
+    "category": "建築地標",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w215",
+    "text": "摩天大樓",
+    "category": "建築地標",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w216",
+    "text": "水塔",
+    "category": "建築地標",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w217",
+    "text": "涼亭",
+    "category": "建築地標",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w218",
+    "text": "噴水池",
+    "category": "建築地標",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w219",
+    "text": "鳥居",
+    "category": "建築地標",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w220",
+    "text": "鐘樓",
+    "category": "建築地標",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w221",
+    "text": "城牆",
+    "category": "建築地標",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w222",
+    "text": "穀倉",
+    "category": "建築地標",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w223",
+    "text": "向日葵",
+    "category": "植物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w224",
+    "text": "玫瑰",
+    "category": "植物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w225",
+    "text": "仙人掌",
+    "category": "植物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w226",
+    "text": "蘑菇",
+    "category": "植物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w227",
+    "text": "竹子",
+    "category": "植物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w228",
+    "text": "楓葉",
+    "category": "植物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w229",
+    "text": "椰子樹",
+    "category": "植物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w230",
+    "text": "鬱金香",
+    "category": "植物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w231",
+    "text": "蒲公英",
+    "category": "植物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w232",
+    "text": "松樹",
+    "category": "植物",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w233",
+    "text": "藤蔓",
+    "category": "植物",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w234",
+    "text": "稻田",
+    "category": "植物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w235",
+    "text": "荷花",
+    "category": "植物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w236",
+    "text": "櫻花",
+    "category": "植物",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w237",
+    "text": "下雨",
+    "category": "天氣季節",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w238",
+    "text": "下雪",
+    "category": "天氣季節",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w239",
+    "text": "颱風",
+    "category": "天氣季節",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w240",
+    "text": "晴天",
+    "category": "天氣季節",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w241",
+    "text": "多雲",
+    "category": "天氣季節",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w242",
+    "text": "春天",
+    "category": "天氣季節",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w243",
+    "text": "夏天",
+    "category": "天氣季節",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w244",
+    "text": "秋天",
+    "category": "天氣季節",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w245",
+    "text": "冬天",
+    "category": "天氣季節",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w246",
+    "text": "生日派對",
+    "category": "節慶活動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w247",
+    "text": "耶誕節",
+    "category": "節慶活動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w248",
+    "text": "萬聖節",
+    "category": "節慶活動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w249",
+    "text": "煙火",
+    "category": "節慶活動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w250",
+    "text": "燈籠",
+    "category": "節慶活動",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w251",
+    "text": "氣球拱門",
+    "category": "節慶活動",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w252",
+    "text": "野餐",
+    "category": "節慶活動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w253",
+    "text": "園遊會",
+    "category": "節慶活動",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w254",
+    "text": "跨年倒數",
+    "category": "節慶活動",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w255",
+    "text": "畢業典禮",
+    "category": "節慶活動",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w256",
+    "text": "婚禮",
+    "category": "節慶活動",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w257",
+    "text": "鉛筆",
+    "category": "文具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w258",
+    "text": "橡皮擦",
+    "category": "文具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w259",
+    "text": "尺",
+    "category": "文具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w260",
+    "text": "蠟筆",
+    "category": "文具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w261",
+    "text": "膠水",
+    "category": "文具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w262",
+    "text": "筆記本",
+    "category": "文具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w263",
+    "text": "削鉛筆機",
+    "category": "文具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w264",
+    "text": "迴紋針",
+    "category": "文具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w265",
+    "text": "計算機",
+    "category": "文具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w266",
+    "text": "三角板",
+    "category": "文具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w267",
+    "text": "鍋子",
+    "category": "廚具餐具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w268",
+    "text": "湯匙",
+    "category": "廚具餐具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w269",
+    "text": "叉子",
+    "category": "廚具餐具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w270",
+    "text": "菜刀",
+    "category": "廚具餐具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w271",
+    "text": "砧板",
+    "category": "廚具餐具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w272",
+    "text": "平底鍋",
+    "category": "廚具餐具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w273",
+    "text": "茶壺",
+    "category": "廚具餐具",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w274",
+    "text": "篩子",
+    "category": "廚具餐具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w275",
+    "text": "擀麵棍",
+    "category": "廚具餐具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w276",
+    "text": "打蛋器",
+    "category": "廚具餐具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w277",
+    "text": "開瓶器",
+    "category": "廚具餐具",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w278",
+    "text": "眼睛",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w279",
+    "text": "鼻子",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w280",
+    "text": "耳朵",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w281",
+    "text": "嘴巴",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w282",
+    "text": "手",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w283",
+    "text": "腳",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w284",
+    "text": "頭髮",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w285",
+    "text": "牙齒",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w286",
+    "text": "肚子",
+    "category": "身體部位",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w287",
+    "text": "跳舞",
+    "category": "動作表情",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w288",
+    "text": "唱歌",
+    "category": "動作表情",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w289",
+    "text": "哭泣",
+    "category": "動作表情",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w290",
+    "text": "大笑",
+    "category": "動作表情",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w291",
+    "text": "睡覺",
+    "category": "動作表情",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w292",
+    "text": "打噴嚏",
+    "category": "動作表情",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w293",
+    "text": "打呵欠",
+    "category": "動作表情",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w294",
+    "text": "鼓掌",
+    "category": "動作表情",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w295",
+    "text": "擁抱",
+    "category": "動作表情",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w296",
+    "text": "揮手",
+    "category": "動作表情",
+    "difficulty": "EASY",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w297",
+    "text": "眨眼",
+    "category": "動作表情",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w298",
+    "text": "思考",
+    "category": "動作表情",
+    "difficulty": "HARD",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w299",
+    "text": "驚訝",
+    "category": "動作表情",
+    "difficulty": "MEDIUM",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "w300",
+    "text": "害羞",
+    "category": "動作表情",
     "difficulty": "HARD",
     "createdAt": "2026-01-01T00:00:00.000Z"
   }

@@ -9,6 +9,8 @@ import {
   beginGame,
   autoPickPendingWordIfNeeded,
   countConnectedPlayers,
+  updateRoomSettings,
+  returnToLobby,
 } from '../roomManager';
 import { beginRound, endRoundAndAdvance, clearRoundTimerForRoom, finishMatchAndScheduleRestart } from '../roundOrchestrator';
 
@@ -92,6 +94,33 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
     beginGame(room);
     io.to(joinCode).emit('room:state', toRoomSummary(room));
     void beginRound(io, room);
+  });
+
+  socket.on('room:updateSettings', (patch) => {
+    const joinCode = socket.data.joinCode as string | undefined;
+    const playerId = socket.data.playerId as string | undefined;
+    if (!joinCode || !playerId) return;
+    const room = getRoom(joinCode);
+    if (!room) return;
+
+    const ok = updateRoomSettings(room, playerId, patch);
+    if (!ok) return; // 不是房主、或房間不在 lobby，安靜忽略，不特別回錯誤
+
+    io.to(joinCode).emit('room:state', toRoomSummary(room));
+  });
+
+  socket.on('room:cancelAutoRestart', () => {
+    const joinCode = socket.data.joinCode as string | undefined;
+    const playerId = socket.data.playerId as string | undefined;
+    if (!joinCode || !playerId) return;
+    const room = getRoom(joinCode);
+    if (!room) return;
+    if (room.status !== 'finished') return;
+    if (playerId !== room.hostPlayerId) return;
+
+    clearRoundTimerForRoom(joinCode);
+    returnToLobby(room);
+    io.to(joinCode).emit('room:state', toRoomSummary(room));
   });
 }
 
