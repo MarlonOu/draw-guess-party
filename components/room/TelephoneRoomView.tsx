@@ -130,7 +130,25 @@ export function TelephoneRoomView({
     !isRevealing && room.status === 'playing' && isMyTurn && yourTurn?.subPhase === 'drawing';
 
   return (
-    <main className="dg-page" style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
+    <main
+      className="dg-page"
+      style={{
+        maxWidth: 1400,
+        margin: '0 auto',
+        padding: 24,
+        // 只在公布結果畫廊顯示時才需要這個修正：<body> 是 display:flex，讓
+        // <main> 變成 flex item；<main> 同時有 margin:'0 auto' 用於超寬螢幕
+        // 置中——CSS flexbox 規格裡，flex item 在橫軸方向上只要有
+        // margin:auto，align-items:stretch 對這個 item 就完全不會生效，item
+        // 會退回「內容多寬就多寬」決定自己的寬度，公布結果畫廊的格線容器
+        // （repeat(auto-fill, minmax(260px, 1fr))）因此量到一個遠小於視窗
+        // 寬度的容器、算不出多欄。這裡刻意不改全站共用的 .dg-page class
+        // （那樣會影響所有頁面，範圍過大），只在 isRevealing 這個特定狀態
+        // 才明確給 width:100%，讓 <main> 的橫軸尺寸不再是 auto，不需要依賴
+        // 會被 auto margin 停用的 stretch；其餘狀態、其餘頁面完全不受影響。
+        ...(isRevealing ? { width: '100%' } : {}),
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <BackButton href="/online" label="線上模式" onBeforeLeave={leaveRoom} />
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>

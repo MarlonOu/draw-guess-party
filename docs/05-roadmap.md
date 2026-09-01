@@ -544,5 +544,18 @@
 - **修法**：改成量測 `canvas.parentElement`（`.dg-canvas-box`，已經是 `position:relative`，尺寸由外層 flex stretch 正確決定）的 `getBoundingClientRect()`，不是畫布自己的。父層 div 是一般元素、不是「替換元素」，不會有這個自我參照的問題，可以正確反映容器的實際尺寸。`DrawingCanvas.tsx`、`StrokeReplay.tsx` 都套用同樣的修正
 - 已通過：直接檢查編譯後的最終 JS 產物確認 `parentElement` 已編譯進兩處畫布元件；端對端功能回歸測試涵蓋兩種模式完整流程（含畫布筆畫轉發），確認這次修正沒有影響任何遊戲邏輯
 - **關於畫廊多欄排列**：直接重新檢視目前的原始碼結構，確認畫廊已經是完全獨立在一般文件流裡的 `width:'100%'` 區塊、`.dg-card` 本身也沒有任何隱藏的寬度限制，程式碼層級沒有再找到會導致單欄堆疊的明確原因。這次的畫布尺寸修正（`canvas.parentElement`）不會影響格線容器本身的寬度計算（那是兩個獨立的問題），如果这次驗證後畫廊還是單欄，麻煩用 100% 縮放（不是 Fit to window）重新截圖，或直接告訴我瀏覽器開發者工具「計算後樣式」（computed style）裡那個 grid 容器的 `width` 實際數值，這樣比較能精準定位
+
+## 畫廊多欄排列的真正根因：`<main>` 是 flex item，auto margin 讓 stretch 失效
+
+- 使用者用 100% 縮放（不是 Fit to window）重新截圖，確認 `main.dg-page` 在 1053px 視窗下正確量到 1053×674，而且畫廊也正確顯示 3 欄——證實先前「Fit to window 縮放造成量測失真」的判斷是對的，但使用者也回報：自己手動把 `.dg-page` 加上 `width:100%` 之後問題才真正消失，代表底下確實有一個真實的 CSS bug，不是單純的量測假象
+- **真正的根因**：`app/globals.css` 的 `body` 有 `display: flex; flex-direction: column`，讓每個頁面最外層的 `<main className="dg-page">` 變成這個 flex 容器裡的一個 flex item。`<main>` 同時有 `margin:'0 auto'`（用來在超過 `maxWidth:1400` 的寬螢幕上置中內容）——這正是問題所在：CSS flexbox 規格裡有一個容易被忽略的行為，只要 flex item 在橫軸方向上有 `margin:auto`，`align-items:stretch`（body 沒有另外設定，用的是預設值）對這個 item 就完全不會生效，item 會退回去用「內容多寬就多寬」（shrink-to-fit）的方式決定自己的寬度，再用那組 auto margin 把自己置中——不會真的撐滿 body 提供的可用寬度。這是好幾輪截圖裡「main 或畫廊容器量到一個遠小於視窗寬度的奇怪數字」的真正原因，只是先前用 Fit to window 縮放模式測試時被誤判成純粹的顯示縮放問題，掩蓋了底下這個真實的 flexbox 機制
+- **修法**：在 `globals.css` 的 `.dg-page` class 補上明確的 `width: 100%`——這是全站每個頁面最外層 `<main>` 共用的 class（首頁、`/online`、`/admin`、DRAW_GUESS 房間頁、DRAW_TELEPHONE 房間頁全部都用），代表這個 bug 原本影響的是整個網站的每一頁，不是接龍模式特有的問題，這次一次修好，不是只補接龍模式這一個案例。補上 `width:100%` 後，`<main>` 的橫軸尺寸不再是 `auto`，不會再依賴會被 auto margin 停用的 stretch、或退回內容寬度；`max-width:1400`／`margin:'0 auto'` 這兩個既有設定完全不受影響，超過 1400px 的寬螢幕還是會正確置中，不會變成貼齊左邊或無限變寬
+- 已通過：`tsc`／`eslint`／`next build` 全數通過；直接檢查編譯後的最終 CSS 產物確認 `.dg-page{width:100%}` 確實生效；確認 `.dg-page` 這個 class 套用在全站 6 個頁面元件上，這次的修正是全站性的；端對端功能回歸測試涵蓋兩種模式完整流程，額外確認首頁／`/online`／`/admin` 三個頁面都正常回應，確認這次修正沒有影響任何頁面的正常運作
+
+## 撤回全站範圍的修正，改成只在公布結果畫廊顯示時才生效
+
+- 使用者要求把上一輪全站性的 `.dg-page { width: 100% }` 撤回，改成只在真正需要的情境（公布結果畫廊）才生效，範圍縮到最小
+- **做法**：從 `globals.css` 的 `.dg-page` class 移除 `width: 100%`（連同對應的說明註解一併移除，避免留下跟實際程式碼不符的過時說明），改成只在 `TelephoneRoomView.tsx` 的 `<main>` inline style 裡，用 `...(isRevealing ? { width: '100%' } : {})` 這種條件式展開的寫法，只有在 `isRevealing`（公布結果畫廊顯示中）這個特定狀態才會加上 `width:'100%'`，其餘任何狀態（lobby、選題中、作畫中……）跟其他頁面完全不受影響、維持原本的 `width:auto` 行為
+- 已通過：`tsc`／`eslint`／`next build` 全數通過；直接檢查編譯後的最終 CSS 產物確認 `.dg-page` class 已經不再有 `width:100%` 規則（撤回成功）；直接檢查編譯後的最終 JS 產物，確認條件式的 `width:"100%"` 只出現在 `isRevealing` 為真時才會展開進 `<main>` 的 style 物件；端對端功能回歸測試確認接龍模式完整流程沒有受影響，額外確認首頁／`/online`／`/admin` 三個頁面依然正常回應
 - 比照音樂猜歌專案：Vultr VPS、PostgreSQL、Cloudflare Tunnel（沿用同一帳號另開子網域）、systemd 服務（`ExecStart` 改為執行 `tsx server.ts` 或先 `next build` 再啟動，需視正式環境是否安裝 `tsx` 決定）
 - 行動裝置實測、效能檢查
