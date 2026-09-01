@@ -10,7 +10,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '請輸入暱稱' }, { status: 400 });
   }
 
-  const mode: GameMode = body?.mode === 'FRAGMENT_DRAW' ? 'FRAGMENT_DRAW' : 'DRAW_GUESS';
+  const mode: GameMode =
+    body?.mode === 'DRAW_TELEPHONE'
+      ? 'DRAW_TELEPHONE'
+      : body?.mode === 'FRAGMENT_DRAW'
+        ? 'FRAGMENT_DRAW'
+        : 'DRAW_GUESS';
   const roundDurationSec =
     typeof body?.roundDurationSec === 'number' ? body.roundDurationSec : 60;
   const categoryFilter: string[] = Array.isArray(body?.categoryFilter)

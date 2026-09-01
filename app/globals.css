@@ -166,9 +166,184 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
+/**
+ * 接龍模式公布畫廊的「作畫流程」視覺化：不另外用一整排編號圓點＋連接線
+ * （那個做法人多的時候會換行、擠成一團，版面容易亂），改成直接做進每張作品
+ * 卡片的外框本身——外框依作畫順序輪流短暫發光，像跑馬燈一樣一張接一張持續
+ * 繞圈播放（`infinite`，不是播一次就停），視覺上跟卡片本身融合在一起，
+ * 不需要額外佔用版面空間，人多人少都不會亂。
+ * 每張卡片的完整繞圈時長（`--pulse-duration`）依接龍棒數動態計算（見
+ * TelephoneRoomView.tsx），確保不管幾人接龍，繞完一圈的節奏感都一致。
+ */
+@keyframes dg-reveal-pulse {
+  0%,
+  100% {
+    border-color: var(--ink);
+    box-shadow: none;
+  }
+  8% {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(255, 107, 74, 0.35);
+  }
+  22% {
+    border-color: var(--ink);
+    box-shadow: none;
+  }
+}
+
+/**
+ * 卡片本身不再做「淡入＋位移」的進場動畫——那個效果連續修過兩輪，還是會在畫面
+ * 剛出現的瞬間跟外層格線容器（`display:grid` + `overflow-y:auto`）的捲動區域計算
+ * 打架，短暫出現空白＋捲軸的排版問題。拿掉這個變因後就不會再有這個問題：卡片
+ * 直接以最終狀態顯示，只保留使用者已經確認滿意的外框循環發光動畫
+ * （`dg-reveal-pulse`），一樣能表達「這是一棒接一棒的接龍」，且完全不影響
+ * 卡片本身的版面配置或尺寸，不會再跟捲動容器互相干擾。
+ */
+.dg-reveal-card {
+  --pulse-duration: 3s;
+  animation: dg-reveal-pulse var(--pulse-duration) ease-in-out infinite;
+}
+
+/**
+ * 全站預設尊重使用者的「減少動態效果」偏好，但這裡刻意排除接龍模式公布結果的
+ * 動畫：這是短暫、不閃爍、不做大幅度視差位移的效果，用來呈現遊戲本身的核心內容
+ * （誰畫了什麼、猜測是什麼、輪到哪一張），不是單純裝飾用的動態效果——一般認為
+ * 不在 WCAG「動態效果與互動」（2.3.3）想防範的「大範圍視差、閃爍、旋轉」這類
+ * 容易引發前庭不適的動態效果範圍內，所以刻意不受這條全域規則影響。
+ */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *:not(.dg-reveal-card) {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* =============================================================================
+ * 手機版 RWD（斷點 640px，涵蓋一般手機直向寬度）
+ *
+ * 整體策略：這個專案原本就大量使用 flexWrap + 百分比/流體寬度（clamp()、
+ * width:'100%'），本身已經有一定的響應式基礎，不是從零開始。這裡的規則只補
+ * 手機螢幕特別需要的部分：縮減邊界留白（把寸土寸金的手機畫面讓給實際內容）、
+ * 讓工具列＋畫布這一列在被迫換行時置中（不然工具列會孤零零貼在最左邊，右側
+ * 留一大塊不對稱的空白）、以及把不需要在手機上佔用寶貴垂直空間的裝飾性文字
+ * （例如接龍大廳疊層裡的長段玩法說明）稍微縮小字級。
+ *
+ * 用 `.dg-page` 這個 class 統一處理「所有頁面最外層 `<main>` 的留白」，
+ * 每個頁面只需要在原本的 inline padding 之外多加這個 class 名稱即可套用；
+ * 用 `!important` 覆蓋 inline style 是刻意的（inline style 預設優先權更高，
+ * 不加 `!important` 這條規則不會生效），這個專案先前處理
+ * prefers-reduced-motion 時也用過同樣的手法。
+ * ========================================================================== */
+
+/**
+ * 畫布（跟公布階段的畫廊、lobby 疊層獨立卡片，這三種內容共用同一個 class 只是
+ * 為了統一寬度邏輯）在「非手機」尺寸的寬度策略：不再用 `vw` 百分比去算一個
+ * 隨視窗線性縮放的數字（那樣在特定視窗寬度下會算出一個不上不下、兩側留白
+ * 不對稱的尷尬數字，使用者截圖裡好幾個中間寬度都是這個問題）。改成用
+ * `flex-grow` 吃掉畫布所在那個 row 裡的剩餘空間（工具列固定寬度、畫布把
+ * 剩下的都佔滿），搭配 500px 的最小寬度下限——小於這個寬度就不再是「非手機」
+ * 情境了，會落到下面的手機斷點規則接手。上限給一個寬鬆的 900px，避免在超寬
+ * 螢幕上畫布單獨被撐到誇張的寬度（連帶讓 8:5 長寬比算出來的高度也跟著誇張）。
+ */
+.dg-canvas-frame {
+  flex: 1 1 500px;
+  min-width: 500px;
+  max-width: 900px;
+  /* lobby 疊層獨立卡片、接龍模式公布結果畫廊也共用這個 class 統一控制寬度。
+     上一輪讓這裡用 `align-self: flex-start` 選擇不參與 stretch、只給一個
+     min-height:500px 的下限，出發點是怕 lobby 內容比工具列少時被硬拉伸留白；
+     但這樣一來，不同遊戲狀態之間的高度就不一致了（進行中的畫布會動態貼齊
+     工具列，lobby 卻只有「至少 500px」，兩者不保證完全相等）。改成統一用
+     `align-self: stretch`（拿掉 flex-start）：flexbox 計算同一列的高度時，
+     即使某個項目自己選擇不參與 stretch，它的「內容原生高度」還是會納入這一列
+     整體高度的計算依據——所以如果 lobby 內容本來就比工具列高（例如展開的分類
+     篩選清單很長），這一列會自然以 lobby 的高度為準，工具列本身沒有參與
+     stretch、不會被拉伸出多餘空白；如果 lobby 內容比工具列矮，換 lobby 參與
+     stretch 就會被撐到跟工具列一樣高。兩種情況都不需要另外猜一個數字，
+     min-height:500px 保留當作最後一道保險（例如接龍公布畫廊沒有工具列同列
+     可以比較時）。
+   */
+  min-height: 500px;
+  align-self: stretch;
+}
+
+/**
+ * 畫布高度：不再用任何猜測數字或長寬比公式決定（試過 550px／620px 的
+ * vw-based 下限、也試過固定 500px，兩種做法都各自出過問題——vw 下限在
+ * 中等寬度區間貼不齊工具列，固定 500px 又跟 inline 殘留的 aspect-ratio
+ * 屬性疊加出不可預期的計算結果，實際導致畫布在某些寬度下直接橫向溢出視窗）。
+ * 這裡改成完全不設定畫布本身的高度，讓 flexbox 的 `align-items: stretch`
+ * （見 .dg-canvas-row 的說明）動態撐到跟同一列裡的工具列一樣高——工具列多高，
+ * 畫布就跟著多高，工具列的實際排版以後如果調整（例如顏色數量變動），畫布也會
+ * 自動跟著對齊，不需要再回來改一個寫死的數字。`align-self` 繼承上面
+ * `.dg-canvas-frame` 給的 `stretch`，不需要另外再設定一次。
+ */
+.dg-canvas-box {
+  height: auto;
+}
+
+@media (max-width: 640px) {
+  .dg-page {
+    padding: 14px !important;
+  }
+
+  /* 工具列＋畫布那一列：手機螢幕寬度不夠兩者並排，會被 flexWrap 拆成兩行，
+     置中對齊比預設的靠左對齊更好看——不然工具列（固定 100px 寬）會孤零零貼在
+     最左邊，右側留一大塊不對稱的空白。 */
+  .dg-canvas-row {
+    justify-content: center;
+  }
+
+  /* 手機尺寸改成完全流體：不再有最小寬度下限（那是「非手機」情境才需要的
+     東西），直接跟著視窗寬度等比縮放，比照最上方房間資訊列（房間代碼、標籤
+     那一整排）本來就是用 flexWrap 自然撐滿可用寬度、沒有另外設定寬度限制的
+     做法。也把最小高度下限重設掉——那個 500px 是非手機情境用來跟工具列比高度
+     的，手機上工具列已經改成橫向排列（見 Toolbar.tsx 的 isMobile 版面），不會
+     有並排比高度的情況，繼續套用這個下限只會在手機螢幕上留下一大塊不必要的
+     空白。 */
+  .dg-canvas-frame {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+  }
+
+  /* 畫布長寬比在手機上從固定高度改回用 aspect-ratio 決定（1:1 正方形）——這是
+     獨立於 .dg-canvas-frame 的另一個 class，只套在「真的是畫布」的那個容器上
+     （DrawingCanvas／StatusOverlay 所在的那個 div），不套在接龍模式公布結果的
+     畫廊外層容器（那個容器也共用 .dg-canvas-frame 只是為了統一寬度，內容是
+     一整排作品卡片，不是畫布，不該被強制擠成正方形）。
+     `height: auto` 這行是必要的：非手機的基礎規則設了固定 `height: 500px`，
+     CSS 層疊預設會讓這個值也套用到手機斷點裡（除非明確覆蓋掉）；height 一旦
+     是明確數值，aspect-ratio 就沒有可以介入的空間（見上面非手機規則的說明），
+     所以手機上要先把 height 重設回 auto，才能讓 aspect-ratio:1/1 真正接手
+     決定高度、跟著畫布寬度一起縮放成正方形。手機上也不需要跟工具列一樣高，
+     那樣會佔掉手機螢幕太多寶貴的垂直空間，工具列在手機上本來就已經改成
+     橫向排列（見 Toolbar.tsx 的 isMobile 版面），不會有跟畫布並排比高度的
+     情況。 */
+  .dg-canvas-box {
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    min-height: 220px !important;
+  }
+
+  /* 首頁的大標題在手機上縮小一點，避免在窄螢幕上顯得過於巨大、擠壓其他內容 */
+  .dg-hero-title {
+    font-size: 32px !important;
+  }
+
+  /* 接龍大廳疊層的玩法說明文字偏長，手機上縮小字級、減少行高，避免疊層
+     內容被撐到需要捲動才看得完 */
+  .dg-mode-note {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  /* 極窄手機（375px 以下，例如較舊的 iPhone）再收一階，維持基本可用性 */
+  .dg-page {
+    padding: 10px !important;
   }
 }

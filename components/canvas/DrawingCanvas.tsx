@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useDrawingSync } from '../../lib/realtime/useDrawingSync';
 import type { Stroke, StrokePoint } from '../../lib/types/stroke';
 
@@ -60,7 +60,8 @@ function buildBrushCursor(color: string, width: number, tool: 'pen' | 'eraser'):
 
 function drawStrokeSegment(
   ctx: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
+  cssWidth: number,
+  cssHeight: number,
   from: StrokePoint,
   to: StrokePoint,
   color: string,
@@ -73,8 +74,8 @@ function drawStrokeSegment(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.beginPath();
-  ctx.moveTo(from.x * canvas.width, from.y * canvas.height);
-  ctx.lineTo(to.x * canvas.width, to.y * canvas.height);
+  ctx.moveTo(from.x * cssWidth, from.y * cssHeight);
+  ctx.lineTo(to.x * cssWidth, to.y * cssHeight);
   ctx.stroke();
 }
 
@@ -83,6 +84,13 @@ function drawStrokeSegment(
  * 復原／清空透過 ref 曝露給外部（RoomPage 把這兩個動作接到左側 Toolbar 的按鈕上），
  * 「畫布現在該顯示什麼狀態看板」也交給外部（RoomPage）決定，本元件不含任何疊層 UI，
  * 保持單一職責。
+ *
+ * 解析度：canvas 內部像素解析度要乘上 `devicePixelRatio`，不能直接照 CSS 顯示尺寸
+ * 設定——在高解析度螢幕（Retina 等）上，內部解析度只照 CSS px 給會比螢幕實際像素少
+ * 很多，畫面偏軟、不夠銳利，畫布尺寸放得越大這個問題越明顯。`canvasCssSizeRef` 記錄
+ * 目前畫布「CSS 顯示尺寸」（不是內部像素解析度），繪圖座標運算都以這個為準，搭配
+ * `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)` 讓實際畫出來的線條自動對齊到 DPR 縮放後的
+ * 內部解析度，不需要每次畫線都手動乘 dpr。
  */
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
   function DrawingCanvas({ color, width, tool, disabled = false }, ref) {
@@ -90,6 +98,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const localStrokeIdRef = useRef<string | null>(null);
     const localStartTimeRef = useRef<number>(0);
     const lastLocalPointRef = useRef<StrokePoint | null>(null);
+    /** 畫布目前的 CSS 顯示尺寸（不是內部像素解析度），resize 時更新，繪圖座標運算都以此為準 */
+    const canvasCssSizeRef = useRef({ width: 0, height: 0 });
 
     /** strokeId -> 完整筆畫資料，用於重繪畫布（例如 undo 時整個重畫） */
     const strokesRef = useRef<Map<string, Stroke>>(new Map());
@@ -101,13 +111,15 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext('2d');
       if (!canvas || !ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const { width: cssWidth, height: cssHeight } = canvasCssSizeRef.current;
+      ctx.clearRect(0, 0, cssWidth, cssHeight);
 
       for (const stroke of strokesRef.current.values()) {
         for (let i = 1; i < stroke.points.length; i++) {
           drawStrokeSegment(
             ctx,
-            canvas,
+            cssWidth,
+            cssHeight,
             stroke.points[i - 1],
             stroke.points[i],
             stroke.color,
@@ -139,8 +151,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         let last =
           remotePendingLastPointRef.current.get(payload.strokeId) ??
           stroke.points[stroke.points.length - 1];
+        const { width: cssWidth, height: cssHeight } = canvasCssSizeRef.current;
         for (const point of payload.points) {
-          drawStrokeSegment(ctx, canvas, last, point, stroke.color, stroke.width, stroke.tool);
+          drawStrokeSegment(ctx, cssWidth, cssHeight, last, point, stroke.color, stroke.width, stroke.tool);
           stroke.points.push(point);
           last = point;
         }
@@ -173,13 +186,48 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       [undoLast, clearCanvas, resetLocal]
     );
 
-    useEffect(() => {
+    /**
+     * 這裡刻意用 useLayoutEffect 不是 useEffect：接下來要做的事情（量測容器實際
+     * 尺寸、直接寫入 canvas.style.width/height）是排版關鍵操作，useLayoutEffect
+     * 會在瀏覽器真正畫面之前同步執行，避免使用者看到「畫布先用預設尺寸閃一下、
+     * 才變成正確尺寸」這種畫面閃爍。
+     *
+     * canvas.style.width／canvas.style.height 直接寫入量到的 CSS 像素值，不再靠
+     * CSS 的 position:absolute+inset:0、也不是 width:'100%'／height:'100%'——canvas
+     * 是「替換元素」，這兩種寫法都各自在特定情境下踩過雷：
+     *  - width/height:'100%'：父層高度如果是透過 flexbox stretch 動態算出來、
+     *    不是一開始就給定明確數值，這個百分比在某些計算時機點會解析失敗，瀏覽器
+     *    退回去用 canvas 的 width/height「屬性」當原生尺寸，導致畫布爆大。
+     *  - position:absolute + inset:0（沒有另外給明確 width/height）：對「替換元素」
+     *    來說，CSS 規格對這個情境的處理跟一般 div 不一樣——並不會真的撐滿容器，
+     *    一樣會退回去用 width/height 屬性當原生尺寸。
+     * 直接用 JS 把量到的容器尺寸寫進 canvas.style.width/height，兩種情境的成因
+     * 都不會發生——不靠任何 CSS 百分比或定位規則去推導尺寸，量到多少就是多少。
+     *
+     * 量測對象是 canvas.parentElement（也就是 .dg-canvas-box，已經是
+     * position:relative、尺寸由外層 flex stretch 正確決定），不是 canvas 自己的
+     * getBoundingClientRect()——這是這一輪才抓到的真正根因：canvas 本身沒有設定
+     * 任何 CSS 寬高（只有 position:absolute,top:0,left:0），在還沒被這段程式寫入
+     * 正確尺寸之前，canvas「自己當下的框」就是瀏覽器預設值 300×150；如果拿
+     * canvas.getBoundingClientRect() 來量，量到的其實是畫布自己的預設框，不是
+     * 容器的實際尺寸——等於拿畫布量自己，一個自我參照的邏輯錯誤，量出來的值
+     * 永遠是 300×150，跟容器實際多大完全無關。改成量父容器的框，就是量「畫布
+     * 應該要多大」的正確依據來源。
+     */
+    useLayoutEffect(() => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      const parent = canvas?.parentElement;
+      if (!canvas || !parent) return;
       const resize = () => {
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+        const rect = parent.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        canvasCssSizeRef.current = { width: rect.width, height: rect.height };
+        const ctx = canvas.getContext('2d');
+        ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
         redrawAll();
       };
       resize();
@@ -230,7 +278,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       if (!canvas || !ctx || !strokeId || !lastLocalPointRef.current) return;
 
       const point = toNormalizedPoint(event, canvas, localStartTimeRef.current);
-      drawStrokeSegment(ctx, canvas, lastLocalPointRef.current, point, color, width, tool);
+      const { width: cssWidth, height: cssHeight } = canvasCssSizeRef.current;
+      drawStrokeSegment(ctx, cssWidth, cssHeight, lastLocalPointRef.current, point, color, width, tool);
       lastLocalPointRef.current = point;
 
       const stroke = strokesRef.current.get(strokeId);
@@ -256,8 +305,15 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         onPointerLeave={handlePointerUp}
         style={{
           display: 'block',
-          width: '100%',
-          height: '100%',
+          // 只負責定位（貼齊容器左上角），不負責尺寸——尺寸完全交給上面
+          // useLayoutEffect 的 resize() 直接寫入 canvas.style.width/height 決定，
+          // 這裡不寫 width/height，也不用 inset:0（那個對 canvas 這種「替換元素」
+          // 沒有撐滿容器的效果，實測會退回去用內部像素解析度當顯示尺寸，畫布因此
+          // 爆大——用 top/left:0 純粹定位、尺寸交給 JS，兩者職責分開就不會再有
+          // 這類 CSS 對替換元素的特殊規則造成的意外）。
+          position: 'absolute',
+          top: 0,
+          left: 0,
           touchAction: 'none',
           background: '#ffffff',
           cursor: disabled ? 'default' : buildBrushCursor(color, width, tool),

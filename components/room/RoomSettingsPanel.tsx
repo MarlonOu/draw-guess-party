@@ -11,6 +11,8 @@ interface RoomSettingsPanelProps {
   categories: string[];
   isHost: boolean;
   onUpdate: (patch: Partial<RoomSettingsValue>) => void;
+  /** DRAW_TELEPHONE 模式沒有「每輪秒數」這個設定（用固定的猜測/作畫限時），隱藏那一區塊 */
+  showRoundDuration?: boolean;
 }
 
 const ROUND_DURATIONS = [30, 60, 90, 120];
@@ -68,7 +70,13 @@ function Chip({
  * 整個設定區塊（乃至疊層本身）撐到超出畫布範圍——畫布本身高度有限，
  * 不能讓可互動的按鈕跑到畫布外面點不到。
  */
-export function RoomSettingsPanel({ settings, categories, isHost, onUpdate }: RoomSettingsPanelProps) {
+export function RoomSettingsPanel({
+  settings,
+  categories,
+  isHost,
+  onUpdate,
+  showRoundDuration = true,
+}: RoomSettingsPanelProps) {
   if (!isHost) {
     const categoryText = settings.categoryFilter.length === 0 ? '全部' : settings.categoryFilter.join('、');
     const difficultyText =
@@ -113,16 +121,18 @@ export function RoomSettingsPanel({ settings, categories, isHost, onUpdate }: Ro
         textAlign: 'left',
       }}
     >
-      <div style={{ width: '100%' }}>
-        <SectionLabel>每輪秒數</SectionLabel>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {ROUND_DURATIONS.map((sec) => (
-            <Chip key={sec} active={settings.roundDurationSec === sec} onClick={() => onUpdate({ roundDurationSec: sec })} compact>
-              {sec}s
-            </Chip>
-          ))}
+      {showRoundDuration && (
+        <div style={{ width: '100%' }}>
+          <SectionLabel>每輪秒數</SectionLabel>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {ROUND_DURATIONS.map((sec) => (
+              <Chip key={sec} active={settings.roundDurationSec === sec} onClick={() => onUpdate({ roundDurationSec: sec })} compact>
+                {sec}s
+              </Chip>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {categories.length > 0 && (
         <div style={{ width: '100%' }}>

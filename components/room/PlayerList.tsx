@@ -11,6 +11,8 @@ interface PlayerListProps {
   hostPlayerId?: string | null;
   /** 固定最大高度，超過就內部捲動；跟聊天室並排時可調整成一致高度 */
   maxHeight?: number;
+  /** 是否顯示右側分數欄位；DRAW_TELEPHONE 模式沒有計分，傳 false 隱藏 */
+  showScore?: boolean;
 }
 
 export function PlayerList({
@@ -20,6 +22,7 @@ export function PlayerList({
   correctGuesserIds = [],
   hostPlayerId,
   maxHeight = 220,
+  showScore = true,
 }: PlayerListProps) {
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
@@ -93,7 +96,9 @@ export function PlayerList({
                 {!p.connected && <span style={{ fontWeight: 400 }}>（已離線）</span>}
               </span>
             </span>
-            <span style={{ fontWeight: 800, color: 'var(--accent-ink)' }}>{p.score}</span>
+            <span style={{ fontWeight: 800, color: 'var(--accent-ink)' }}>
+              {showScore ? p.score : ''}
+            </span>
           </li>
         );
       })}

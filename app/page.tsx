@@ -3,6 +3,7 @@ import Link from 'next/link';
 export default function Home() {
   return (
     <main
+      className="dg-page"
       style={{
         flex: 1,
         display: 'flex',
@@ -16,6 +17,7 @@ export default function Home() {
           派對遊戲
         </p>
         <h1
+          className="dg-hero-title"
           style={{
             fontSize: 44,
             fontWeight: 900,

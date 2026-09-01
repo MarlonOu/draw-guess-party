@@ -124,7 +124,7 @@ export default function AdminWordsPage() {
   };
 
   return (
-    <main style={{ maxWidth: 860, margin: '0 auto', padding: 24 }}>
+    <main className="dg-page" style={{ maxWidth: 860, margin: '0 auto', padding: 24 }}>
       <div style={{ marginBottom: 16 }}>
         <BackButton href="/" label="首頁" />
       </div>

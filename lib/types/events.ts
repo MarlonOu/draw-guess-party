@@ -1,4 +1,4 @@
-import type { RoomPlayer, RoomSummary } from './room';
+import type { RoomPlayer, RoomSummary, TelephoneReveal } from './room';
 import type { Stroke, StrokePoint } from './stroke';
 import type { GuessMessage } from './round';
 
@@ -36,6 +36,12 @@ export interface ClientToServerEvents {
   'canvas:undo': () => void;
 
   'chat:message': (payload: { text: string }) => void;
+
+  /** DRAW_TELEPHONE 模式：輪到自己時，先送出對「上一棒的畫」的猜測文字 */
+  'telephone:submitGuess': (payload: { text: string }) => void;
+  /** DRAW_TELEPHONE 模式：輪到自己畫的時候，畫完按下「交給下一位」，沒有額外資料——
+   *  這一棒的筆畫資料伺服器早就透過 stroke:start/points/end 即時收著了 */
+  'telephone:submitDrawing': () => void;
 }
 
 /** Server -> Client */
@@ -81,8 +87,23 @@ export interface ServerToClientEvents {
     nextRoundInSec: number;
   }) => void;
   /** nextMatchInSec：幾秒後會自動開始新的一場比賽；連線人數不足時伺服器屆時不會真的
-   *  重啟，但事件本身仍照樣送出這個預期倒數值，前端據此顯示「X 秒後開始新的一場」 */
-  'game:finished': (payload: { nextMatchInSec: number }) => void;
+   *  重啟，改用 null 表示「這次不會自動重啟」，前端據此顯示不同文字 */
+  'game:finished': (payload: { nextMatchInSec: number | null }) => void;
 
   'chat:message': (payload: GuessMessage) => void;
+
+  /**
+   * DRAW_TELEPHONE 模式：私訊，只送給「現在輪到」的那個人，告知他該做什麼。
+   * subPhase 'guessing' 時附上前一棒的畫布筆畫供他觀察猜測；'drawing' 時附上他自己
+   * 剛才送出的猜測文字（或者，如果他是接龍第一棒，附上系統隨機指定的原始題目）
+   * 作為這一棒要畫的提示——注意這裡刻意不讓他在畫圖時同時看得到前一棒的畫面，
+   * 只給文字提示，避免變成照著畫、失去「傳話」該有的失真效果。
+   */
+  'telephone:yourTurn': (
+    payload:
+      | { subPhase: 'guessing'; previousStrokes: Stroke[] }
+      | { subPhase: 'drawing'; promptText: string }
+  ) => void;
+  /** 廣播：接龍跑完最後一棒，公布原始題目跟整條鏈的所有作品／猜測，供大家欣賞 */
+  'telephone:reveal': (payload: TelephoneReveal) => void;
 }

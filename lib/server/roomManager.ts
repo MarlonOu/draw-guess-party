@@ -1,5 +1,17 @@
-import type { RoomPlayer, RoomSettings, RoomSummary, RoomStatus, RoundPhase } from '../types/room';
+import type {
+  RoomPlayer,
+  RoomSettings,
+  RoomSummary,
+  RoomStatus,
+  RoundPhase,
+  TelephoneSummary,
+} from '../types/room';
 import type { Stroke } from '../types/stroke';
+import {
+  shuffleChainOrder,
+  pickRandomWord,
+  findNextActiveIndex,
+} from '../engine/telephoneEngine';
 import {
   getNextDrawer,
   computeRoundCount,
@@ -16,6 +28,42 @@ interface WordOption {
 export interface CorrectGuessRecord {
   playerId: string;
   points: number;
+}
+
+export interface TelephoneEntry {
+  playerId: string;
+  displayName: string;
+  strokes: Stroke[];
+  /** 這一棒的人對「上一棒的畫」給出的猜測文字；接龍第一棒沒有這個欄位（他沒有前一棒可以猜） */
+  guessText?: string;
+}
+
+/**
+ * DRAW_TELEPHONE 模式的伺服器內部完整狀態（含還沒公布前不能讓其他人看到的內容）。
+ * 只有 room.settings.mode === 'DRAW_TELEPHONE' 時才會是非 null。
+ */
+export interface TelephoneState {
+  /** 依隨機順序排列的整條接龍玩家 id，比賽開始時決定，中途不變動（離開的人用 findNextActiveIndex 動態跳過，不修改這個陣列本身） */
+  chainOrder: string[];
+  /** 目前輪到 chainOrder 的第幾位（0 起算） */
+  currentIndex: number;
+  /** 目前這一位在接龍裡的子階段：guessing（先看前一棒的畫、寫下猜測）、drawing（畫自己的猜測）；
+   *  revealed 為 true 之後固定是 null */
+  subPhase: 'guessing' | 'drawing' | null;
+  /** 目前這個子階段開始的時間戳（epoch ms），跟 subPhase 同時設定、同時清空。
+   *  廣播給全房間所有人，讓旁觀者也能算出跟當事人同步的剩餘時間倒數，
+   *  不用只有正在動作的那個人自己心裡默默倒數、其他人完全看不到進度。 */
+  subPhaseStartedAt: number | null;
+  /** 是否已經公布，公布之後整條接龍就結束了，不會再回到 guessing/drawing */
+  revealed: boolean;
+  /** 接龍第一棒的原始題目，只有第一棒的人看得到（透過私訊），其他人要等 revealed 才看得到 */
+  originalWord: string | null;
+  /** 已經完成的每一棒，依接龍順序累積 */
+  entries: TelephoneEntry[];
+  /** 目前這一位在 guessing 子階段送出、還沒進到 drawing 前暫存的猜測文字 */
+  pendingGuessText: string | null;
+  /** 目前這一位正在畫的筆畫（即時累積，這一棒交出去後打包進 entries，開始新的一棒時清空） */
+  currentStrokes: Stroke[];
 }
 
 export interface RoomState {
@@ -49,6 +97,8 @@ export interface RoomState {
   usedWordIds: Set<string>;
   /** 目前這一輪的完整筆畫資料，round 結束時整理落地、開始新一輪時清空 */
   currentStrokes: Stroke[];
+  /** DRAW_TELEPHONE 模式專用狀態，其餘模式固定為 null */
+  telephone: TelephoneState | null;
 }
 
 const globalForRooms = globalThis as unknown as { __drawGuessPartyRooms?: Map<string, RoomState> };
@@ -118,6 +168,7 @@ export function createRoom(creatorDisplayName: string, settings: RoomSettings): 
     roundPhase: null,
     usedWordIds: new Set(),
     currentStrokes: [],
+    telephone: null,
   };
   rooms.set(joinCode, room);
   return room;
@@ -143,10 +194,18 @@ export function getRoom(joinCode: string): RoomState | undefined {
  * 邊界條件：
  *  - 帶入既有 playerId 且該玩家存在於房間內時，視為「綁定連線」（建立房間後第一次
  *    連上 socket、或斷線重連），不建立新玩家、不受房間狀態限制
- *  - 未帶入 playerId 時視為全新玩家加入。房間狀態為 lobby 時正常加入；
- *    房間狀態為 playing 時也接受加入，直接排到輪流順序最後面（見下方），這一場
- *    多算一輪給他，不會插隊排到還沒輪到的人前面；房間狀態為 finished 時不接受
- *    （這是等待自動回到 lobby 或重啟新一場的過渡狀態，不必特地處理中途加入）
+ *  - 帶入既有 playerId 但該玩家已經不存在於房間內時（斷線緩衝期過後被硬刪除、
+ *    或帶著別的房間留下的舊 id 誤連到這裡），不能直接判定失敗——這裡曾經是一個
+ *    真實發生過的 bug：使用者瀏覽器端快取的 playerId 一旦失效，每次重新整理
+ *    頁面重連都繼續帶著同一個已經不存在的 id 去查，注定每次都失敗，永遠卡在
+ *    「找不到這個房間，或房間目前無法加入」的錯誤訊息，即使房間本身其實還在、
+ *    也還能加入。正確的行為是落到下面「當作全新玩家加入」繼續處理，讓對方能
+ *    順利用新的 playerId 重新加入這個房間
+ *  - 未帶入 playerId（或帶入了但查無此人，如上一點）時視為全新玩家加入。
+ *    房間狀態為 lobby 時正常加入；房間狀態為 playing 時也接受加入，直接排到
+ *    輪流順序最後面（見下方），這一場多算一輪給他，不會插隊排到還沒輪到的人
+ *    前面；房間狀態為 finished 時不接受（這是等待自動回到 lobby 或重啟新一場
+ *    的過渡狀態，不必特地處理中途加入）
  */
 export function joinRoom(
   joinCode: string,
@@ -159,10 +218,13 @@ export function joinRoom(
 
   if (existingPlayerId) {
     const existing = room.players.get(existingPlayerId);
-    if (!existing) return null;
-    existing.socketId = socketId;
-    existing.connected = true;
-    return existing;
+    if (existing) {
+      existing.socketId = socketId;
+      existing.connected = true;
+      return existing;
+    }
+    // 找不到這個 id 對應的玩家——不要在這裡直接回傳 null，繼續往下走，
+    // 當作全新玩家加入處理
   }
 
   if (room.status === 'finished') return null;
@@ -228,12 +290,18 @@ export function markPlayerDisconnected(joinCode: string, playerId: string): void
 export function removePlayer(
   joinCode: string,
   playerId: string
-): { wasCurrentDrawer: boolean; roomDeleted: boolean } {
+): { wasCurrentDrawer: boolean; wasActiveTelephonePlayer: boolean; roomDeleted: boolean } {
   const room = rooms.get(joinCode);
-  if (!room) return { wasCurrentDrawer: false, roomDeleted: false };
+  if (!room) return { wasCurrentDrawer: false, wasActiveTelephonePlayer: false, roomDeleted: false };
 
   const wasCurrentDrawer =
     room.status === 'playing' && room.roundPhase === 'drawing' && playerId === room.drawerPlayerId;
+
+  const wasActiveTelephonePlayer =
+    room.settings.mode === 'DRAW_TELEPHONE' &&
+    room.telephone !== null &&
+    !room.telephone.revealed &&
+    room.telephone.chainOrder[room.telephone.currentIndex] === playerId;
 
   room.players.delete(playerId);
 
@@ -257,16 +325,39 @@ export function removePlayer(
 
   if (room.players.size === 0) {
     rooms.delete(joinCode);
-    return { wasCurrentDrawer, roomDeleted: true };
+    return { wasCurrentDrawer, wasActiveTelephonePlayer, roomDeleted: true };
   }
 
-  return { wasCurrentDrawer, roomDeleted: false };
+  return { wasCurrentDrawer, wasActiveTelephonePlayer, roomDeleted: false };
 }
 
 function getNextDrawerPlayerId(room: RoomState): string | null {
   if (room.turnOrder.length === 0) return null;
   const nextIndex = (room.drawerIndex + 1) % room.turnOrder.length;
   return room.turnOrder[nextIndex];
+}
+
+function toTelephoneSummary(room: RoomState): TelephoneSummary | null {
+  const t = room.telephone;
+  if (!t) return null;
+  return {
+    chainOrder: t.chainOrder,
+    currentIndex: t.currentIndex,
+    subPhase: t.subPhase,
+    subPhaseStartedAt: t.subPhaseStartedAt,
+    activePlayerId:
+      !t.revealed && t.currentIndex >= 0 && t.currentIndex < t.chainOrder.length
+        ? t.chainOrder[t.currentIndex]
+        : null,
+    completedCount: t.entries.length,
+    totalPlayers: t.chainOrder.length,
+    reveal: t.revealed
+      ? {
+          originalWord: t.originalWord ?? '',
+          entries: t.entries,
+        }
+      : null,
+  };
 }
 
 export function toRoomSummary(room: RoomState): RoomSummary {
@@ -288,6 +379,7 @@ export function toRoomSummary(room: RoomState): RoomSummary {
     nextDrawerPlayerId: getNextDrawerPlayerId(room),
     wordChosen: room.currentWord !== null,
     correctGuesserIds: room.correctGuesses.map((g) => g.playerId),
+    telephone: toTelephoneSummary(room),
   };
 }
 
@@ -535,6 +627,7 @@ export function returnToLobby(room: RoomState): void {
   room.roundCount = 0;
   room.currentRoundIndex = 0;
   room.usedWordIds = new Set();
+  room.telephone = null;
   for (const player of room.players.values()) {
     player.score = 0;
   }
@@ -586,6 +679,146 @@ export function findRoomBySocketId(
         return { room, playerId: player.id };
       }
     }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// DRAW_TELEPHONE 模式
+// ---------------------------------------------------------------------------
+
+export const TELEPHONE_MIN_PLAYERS = 3;
+
+/**
+ * 開始一場接龍：隨機排定順序、隨機抽一個題目給第一棒，狀態轉為 playing。
+ * 輸入：房間、可用題庫（已依房間分類/難度篩選）
+ * 輸出：{ firstPlayerId, word }，或 null（連線人數不足 3 人、或題庫是空的）
+ * 邊界條件：只抽連線中的玩家排進接龍順序，理由跟 DRAW_GUESS 的 beginGame 一樣——
+ *          排進去的人如果沒連線，輪到他時沒人能操作
+ */
+export function beginTelephoneGame(
+  room: RoomState,
+  wordBank: { id: string; text: string }[]
+): { firstPlayerId: string; word: string } | null {
+  const connectedIds = Array.from(room.players.values())
+    .filter((p) => p.connected)
+    .map((p) => p.id);
+  if (connectedIds.length < TELEPHONE_MIN_PLAYERS) return null;
+
+  const word = pickRandomWord(wordBank);
+  if (!word) return null;
+
+  const chainOrder = shuffleChainOrder(connectedIds);
+
+  room.status = 'playing';
+  room.telephone = {
+    chainOrder,
+    currentIndex: 0,
+    subPhase: 'drawing', // 接龍第一棒只需要畫，不用猜（沒有前一棒可以猜）
+    subPhaseStartedAt: Date.now(),
+    revealed: false,
+    originalWord: word,
+    entries: [],
+    pendingGuessText: null,
+    currentStrokes: [],
+  };
+
+  return { firstPlayerId: chainOrder[0], word };
+}
+
+/**
+ * 目前輪到的人送出對「前一棒的畫」的猜測。所有玩家（含接龍最後一棒）都走同一套
+ * 「先猜、再畫」流程，不再有「最後一棒只猜不畫」的特例——猜完一律進入作畫階段，
+ * 是不是真的還有「下一位」交棒，留給 submitTelephoneDrawing 交出畫作之後才判斷。
+ * 輸出：
+ *  - null：不符合條件（不是他的回合、房間不是接龍模式、已經公布過了……）
+ *  - { playerId; promptText }：這個人接著要用自己剛才的猜測文字（promptText）去畫
+ *
+ * 猜測文字統一裁切到 60 字、去除頭尾空白，避免整段貼上的內容把畫面撐爆；
+ * 空字串一律視為「（空白）」，維持接龍鏈上每一棒都有內容可以往下傳。
+ */
+export function submitTelephoneGuess(
+  room: RoomState,
+  playerId: string,
+  text: string
+): { playerId: string; promptText: string } | null {
+  const t = room.telephone;
+  if (!t || t.revealed || t.subPhase !== 'guessing') return null;
+  if (t.chainOrder[t.currentIndex] !== playerId) return null;
+
+  const trimmed = text.trim().slice(0, 60) || '（空白）';
+  t.pendingGuessText = trimmed;
+  t.subPhase = 'drawing';
+  t.subPhaseStartedAt = Date.now();
+  t.currentStrokes = [];
+  return { playerId, promptText: trimmed };
+}
+
+/**
+ * 目前輪到的人交出這一棒的畫作，推進到接龍下一位。
+ * 輸出：
+ *  - null：不符合條件
+ *  - { advanced: true; nextPlayerId }：正常推進到下一位，下一位子階段一律是 guessing
+ *    （接龍第一棒以外，每一位都是先猜再畫，包含接龍最後一棒——最後一棒猜完一樣要畫，
+ *    畫完交出去之後才會因為「找不到下一位」而觸發下面的公布階段）
+ *  - { advanced: false }：已經是接龍最後一棒交出畫作、或後面的人陸續都離開了找不到
+ *    下一個還在房間裡的人，兩種情況都直接進入公布階段
+ */
+export function submitTelephoneDrawing(
+  room: RoomState,
+  playerId: string
+): { advanced: true; nextPlayerId: string } | { advanced: false } | null {
+  const t = room.telephone;
+  if (!t || t.revealed || t.subPhase !== 'drawing') return null;
+  if (t.chainOrder[t.currentIndex] !== playerId) return null;
+
+  const player = room.players.get(playerId);
+  t.entries.push({
+    playerId,
+    displayName: player?.displayName ?? '離線玩家',
+    strokes: t.currentStrokes,
+    guessText: t.pendingGuessText ?? undefined,
+  });
+  t.pendingGuessText = null;
+  t.currentStrokes = [];
+
+  const presentIds = new Set(room.players.keys());
+  const nextIndex = findNextActiveIndex(t.chainOrder, t.currentIndex, presentIds);
+
+  if (nextIndex === null) {
+    t.revealed = true;
+    t.subPhase = null;
+    t.subPhaseStartedAt = null;
+    return { advanced: false };
+  }
+
+  t.currentIndex = nextIndex;
+  t.subPhase = 'guessing';
+  t.subPhaseStartedAt = Date.now();
+  return { advanced: true, nextPlayerId: t.chainOrder[nextIndex] };
+}
+
+/**
+ * 目前輪到的人逾時、或斷線緩衝期到期仍未回來時，自動代他送出一個空白內容
+ * （guessing 子階段送「（沒有人猜）」；drawing 子階段直接交出目前累積到的筆畫，
+ * 可能是空白畫布），確保接龍不會被卡住。回傳值跟被代打的那個動作
+ * （submitTelephoneGuess 或 submitTelephoneDrawing）完全一致，呼叫端不需要另外分支處理。
+ */
+export function autoSubmitTelephoneTurn(
+  room: RoomState
+):
+  | ReturnType<typeof submitTelephoneGuess>
+  | ReturnType<typeof submitTelephoneDrawing>
+  | null {
+  const t = room.telephone;
+  if (!t || t.revealed) return null;
+  const activePlayerId = t.chainOrder[t.currentIndex];
+
+  if (t.subPhase === 'guessing') {
+    return submitTelephoneGuess(room, activePlayerId, '（沒有人猜）');
+  }
+  if (t.subPhase === 'drawing') {
+    return submitTelephoneDrawing(room, activePlayerId);
   }
   return null;
 }

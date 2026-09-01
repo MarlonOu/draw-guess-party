@@ -11,8 +11,15 @@ import {
   countConnectedPlayers,
   updateRoomSettings,
   returnToLobby,
+  TELEPHONE_MIN_PLAYERS,
 } from '../roomManager';
 import { beginRound, endRoundAndAdvance, clearRoundTimerForRoom, finishMatchAndScheduleRestart } from '../roundOrchestrator';
+import {
+  beginTelephoneRound,
+  forceAdvanceTelephoneOnRemoval,
+  clearTelephoneTimerForRoom,
+  sendYourTurn,
+} from '../telephoneOrchestrator';
 
 /**
  * 斷線緩衝時間：手機切到別的 App（例如分享房間連結）、或短暫網路不穩時，瀏覽器分頁
@@ -63,6 +70,20 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
 
     socket.emit('room:joined', { playerId: player.id });
     io.to(joinCode).emit('room:state', toRoomSummary(room));
+
+    // DRAW_TELEPHONE 模式：如果這個人重新整理頁面重連時剛好還輪到他（不管是猜測
+    // 還是作畫子階段），要補送一次私訊——畫布筆畫跟猜測提示這些內容只透過私訊傳送，
+    // 不會放進上面剛廣播的 room:state（避免其他人偷看），單純重連收不到任何內容，
+    // 畫面會卡在一片空白、連「返回大廳」的按鈕都看不到，房間流程就此卡死。
+    if (
+      existingPlayerId &&
+      room.settings.mode === 'DRAW_TELEPHONE' &&
+      room.telephone &&
+      !room.telephone.revealed &&
+      room.telephone.chainOrder[room.telephone.currentIndex] === player.id
+    ) {
+      sendYourTurn(io, room);
+    }
   });
 
   socket.on('room:leave', () => {
@@ -84,6 +105,16 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
     const room = getRoom(joinCode);
     if (!room) return;
     if (room.status !== 'lobby') return;
+
+    if (room.settings.mode === 'DRAW_TELEPHONE') {
+      // 接龍模式需要至少 3 人才玩得起來（第一棒畫、中間至少一棒猜+畫、最後一棒猜）
+      if (countConnectedPlayers(room) < TELEPHONE_MIN_PLAYERS) {
+        socket.emit('room:error', { message: `至少需要 ${TELEPHONE_MIN_PLAYERS} 人才能開始接龍` });
+        return;
+      }
+      void beginTelephoneRound(io, room);
+      return;
+    }
 
     // 沒有房主限制：房間裡任何一個人都可以觸發開始，只要求連線中人數 >= 2
     if (countConnectedPlayers(room) < 2) {
@@ -165,16 +196,25 @@ function performRemoval(io: Server, joinCode: string, playerId: string): void {
   const room = getRoom(joinCode);
   if (!room) return;
 
-  const { wasCurrentDrawer, roomDeleted } = removePlayer(joinCode, playerId);
+  const { wasCurrentDrawer, wasActiveTelephonePlayer, roomDeleted } = removePlayer(joinCode, playerId);
 
   if (roomDeleted) {
     clearRoundTimerForRoom(joinCode);
+    clearTelephoneTimerForRoom(joinCode);
     return;
   }
 
   io.to(joinCode).emit('room:state', toRoomSummary(room));
 
   if (room.status !== 'playing') return;
+
+  if (room.settings.mode === 'DRAW_TELEPHONE') {
+    if (wasActiveTelephonePlayer) {
+      // 保留至先前推進到下一位的邏輯（或提早進入公布階段，如果後面已經沒有人了）
+      forceAdvanceTelephoneOnRemoval(io, room);
+    }
+    return;
+  }
 
   if (room.players.size < 2) {
     clearRoundTimerForRoom(joinCode);

@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSocket } from './socketClient';
-import type { RoomSummary } from '../types/room';
+import type { RoomSummary, TelephoneReveal } from '../types/room';
 import type { GuessMessage } from '../types/round';
 import type { WordOption } from '../types/events';
+import type { Stroke } from '../types/stroke';
 import {
   playPlayerJoinSound,
   playPlayerLeaveSound,
@@ -31,6 +32,11 @@ interface RoundStartInfo {
   drawerPlayerId: string;
 }
 
+/** DRAW_TELEPHONE 模式：私訊告知「現在輪到自己該做什麼」 */
+type TelephoneYourTurn =
+  | { subPhase: 'guessing'; previousStrokes: Stroke[] }
+  | { subPhase: 'drawing'; promptText: string };
+
 export function useRoomSocket() {
   // 初始值直接讀取 socket 目前的實際連線狀態，而不是恆為 false：
   // 若這個分頁在本次 session 中先前已經連過線（例如建過一次房間、又建第二次），
@@ -51,6 +57,11 @@ export function useRoomSocket() {
   const [nextMatchInSec, setNextMatchInSec] = useState<number | null>(null);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
 
+  /** DRAW_TELEPHONE 模式：輪到自己時該做什麼；換人接龍或回到大廳時清空 */
+  const [telephoneYourTurn, setTelephoneYourTurn] = useState<TelephoneYourTurn | null>(null);
+  /** DRAW_TELEPHONE 模式：接龍公布內容，只有 reveal 階段才非 null */
+  const [telephoneReveal, setTelephoneReveal] = useState<TelephoneReveal | null>(null);
+
   /**
    * 用來偵測「跟上一次相比發生了什麼變化」的參照值，不是拿來畫面渲染用的狀態
    * （所以用 ref 不用 state），純粹給音效判斷用：
@@ -62,6 +73,10 @@ export function useRoomSocket() {
    */
   const previousPlayerIdsRef = useRef<Set<string> | null>(null);
   const previousWordChosenRef = useRef(false);
+  /** DRAW_TELEPHONE 模式：偵測「輪到誰接龍」的變化，變化時播放交棒音效，
+   *  不設「第一次不比對」的門檻——從 null 變成第一位的那個瞬間（比賽剛開始、
+   *  第一棒要開始畫了）本身就是想播音效的時機 */
+  const previousTelephoneActivePlayerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -84,6 +99,27 @@ export function useRoomSocket() {
       }
       previousPlayerIdsRef.current = newIds;
       previousWordChosenRef.current = payload.wordChosen;
+
+      // DRAW_TELEPHONE 模式：輪到的人變了（含比賽剛開始、第一棒要開始畫的那一刻）
+      // 就播放交棒音效，沿用 DRAW_GUESS「選題完成」那顆音效，語意上都對應
+      // 「輪到你了，開始動作」這個瞬間，不需要另外設計新的音效。
+      const newActiveTelephonePlayerId = payload.telephone?.activePlayerId ?? null;
+      if (
+        newActiveTelephonePlayerId !== null &&
+        newActiveTelephonePlayerId !== previousTelephoneActivePlayerIdRef.current
+      ) {
+        playWordChosenSound();
+      }
+      previousTelephoneActivePlayerIdRef.current = newActiveTelephonePlayerId;
+
+      // DRAW_TELEPHONE 模式：公布結果改成完全從 room:state 派生，不再只依賴一次性的
+      // telephone:reveal 事件——原本的做法是房主／玩家如果在公布畫面重新整理頁面，
+      // 重連後只會收到 room:state（其中 room.telephone.reveal 本來就有完整內容），
+      // 但一次性事件不會補送，導致 telephoneReveal 這個 state 永遠是 null、畫面卡在
+      // 一片空白，房間流程也跟著卡死（沒有人能點「返回大廳」，因為那個按鈕的畫面
+      // 根本沒渲染出來）。這裡讓它每次都跟著 room:state 同步，不管是不是重新整理過，
+      // 永遠反映伺服器目前的真實狀態；回到 lobby（reveal 變 null）也會跟著清空。
+      setTelephoneReveal(payload.telephone?.reveal ?? null);
 
       setRoom(payload);
       // 房間狀態一旦離開 finished（例如自動回到 lobby 等待更多人加入），前端也要
@@ -137,6 +173,16 @@ export function useRoomSocket() {
       setNextMatchInSec(payload.nextMatchInSec);
     };
     const onRoomJoined = (payload: { playerId: string }) => setMyPlayerId(payload.playerId);
+    const onTelephoneYourTurn = (payload: TelephoneYourTurn) => {
+      setTelephoneYourTurn(payload);
+    };
+    const onTelephoneReveal = (payload: TelephoneReveal) => {
+      setTelephoneReveal(payload);
+      setTelephoneYourTurn(null);
+      // 沿用「全數猜對」那顆慶祝音效，接龍公布整條鏈本來就是這個玩法的高潮時刻，
+      // 語意上跟「大家都答對了」的歡慶感一致。
+      playAllCorrectSound();
+    };
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -148,6 +194,8 @@ export function useRoomSocket() {
     socket.on('round:end', onRoundEnd);
     socket.on('game:finished', onGameFinished);
     socket.on('room:joined', onRoomJoined);
+    socket.on('telephone:yourTurn', onTelephoneYourTurn);
+    socket.on('telephone:reveal', onTelephoneReveal);
 
     return () => {
       socket.off('connect', onConnect);
@@ -160,6 +208,8 @@ export function useRoomSocket() {
       socket.off('round:end', onRoundEnd);
       socket.off('game:finished', onGameFinished);
       socket.off('room:joined', onRoomJoined);
+      socket.off('telephone:yourTurn', onTelephoneYourTurn);
+      socket.off('telephone:reveal', onTelephoneReveal);
     };
   }, []);
 
@@ -171,6 +221,8 @@ export function useRoomSocket() {
     getSocket().emit('room:leave');
     setRoom(null);
     setMessages([]);
+    setTelephoneYourTurn(null);
+    setTelephoneReveal(null);
   }, []);
 
   const startGame = useCallback(() => {
@@ -196,6 +248,16 @@ export function useRoomSocket() {
     getSocket().emit('room:cancelAutoRestart');
   }, []);
 
+  const submitTelephoneGuess = useCallback((text: string) => {
+    getSocket().emit('telephone:submitGuess', { text });
+    setTelephoneYourTurn(null);
+  }, []);
+
+  const submitTelephoneDrawing = useCallback(() => {
+    getSocket().emit('telephone:submitDrawing');
+    setTelephoneYourTurn(null);
+  }, []);
+
   return {
     connected,
     room,
@@ -208,6 +270,8 @@ export function useRoomSocket() {
     gameFinished,
     nextMatchInSec,
     myPlayerId,
+    telephoneYourTurn,
+    telephoneReveal,
     joinRoom,
     leaveRoom,
     startGame,
@@ -215,5 +279,7 @@ export function useRoomSocket() {
     chooseWord,
     updateSettings,
     cancelAutoRestart,
+    submitTelephoneGuess,
+    submitTelephoneDrawing,
   };
 }

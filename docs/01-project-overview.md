@@ -12,7 +12,7 @@
 |---|---|---|---|
 | `DRAW_GUESS` | 你畫我猜 | 輪流一人畫圖，其他人聊天室搶答猜題目 | v1，優先實作 |
 | `FRAGMENT_DRAW` | 共同拼圖畫 | 畫布依人數切格，每人畫自己那一格，公布時前端合成成一張完整圖 | v2 |
-| `DRAW_TELEPHONE` | 傳話畫圖接龍 | 依序輪流「畫→猜→畫→猜」，最後攤開整條鏈看接龍怎麼走鐘 | v3（stretch） |
+| `DRAW_TELEPHONE` | 畫圖接龍 | 至少 3 人，每一位先看前一棒的畫、猜測，再畫下自己的猜測（不是交替文字/圖片），最後一位只猜、猜完直接公布整條鏈給大家欣賞 | v2（已完成） |
 
 三種模式共用同一套「即時繪圖引擎」（畫布、筆刷、同步機制）與「房間系統」，差異在於：誰看得到畫布、有沒有「猜」這個動作、計分邏輯是否存在。
 
@@ -38,7 +38,7 @@
 
 詳見 `05-roadmap.md`。順序為：環境建置 → 房間系統 → 即時繪圖引擎 MVP → DRAW_GUESS 模式 → 題庫管理後台 → FRAGMENT_DRAW 模式 → （stretch）DRAW_TELEPHONE 模式 → 行動裝置優化與部署。
 
-**本次整合實作完成度**：Phase 0（環境／專案骨架）、Phase 1（房間系統）、Phase 2（即時繪圖引擎 MVP）、Phase 3（DRAW_GUESS 完整流程：抽題、輪流指定畫圖者、猜對自動公布並進下一輪）、Phase 4（題庫管理後台）已完成並通過端對端測試。Phase 5 起（`FRAGMENT_DRAW`、`DRAW_TELEPHONE`、PostgreSQL/Prisma 資料落地、部署）尚未實作。
+**本次整合實作完成度**：Phase 0（環境／專案骨架）、Phase 1（房間系統）、Phase 2（即時繪圖引擎 MVP）、Phase 3（DRAW_GUESS 完整流程：抽題、輪流指定畫圖者、猜對自動公布並進下一輪）、Phase 4（題庫管理後台）、Phase 6（DRAW_TELEPHONE 畫圖接龍）已完成並通過端對端測試。Phase 5（`FRAGMENT_DRAW`）、PostgreSQL/Prisma 資料落地、部署尚未實作。
 
 ## 視覺設計
 

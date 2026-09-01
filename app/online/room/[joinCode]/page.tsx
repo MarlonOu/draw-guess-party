@@ -13,6 +13,7 @@ import { StatusOverlay } from '../../../../components/room/StatusOverlay';
 import { StatusIcon } from '../../../../components/room/StatusIcon';
 import { RoomSettingsPanel } from '../../../../components/room/RoomSettingsPanel';
 import { SoundToggleButton } from '../../../../components/room/SoundToggleButton';
+import { TelephoneRoomView } from '../../../../components/room/TelephoneRoomView';
 
 interface StoredIdentity {
   displayName: string;
@@ -44,6 +45,10 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
     chooseWord,
     updateSettings,
     cancelAutoRestart,
+    telephoneYourTurn,
+    telephoneReveal,
+    submitTelephoneGuess,
+    submitTelephoneDrawing,
   } = useRoomSocket();
 
   const [categories, setCategories] = useState<string[]>([]);
@@ -172,7 +177,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
 
   if (error) {
     return (
-      <main style={{ maxWidth: 480, margin: '0 auto', padding: 24, textAlign: 'center' }}>
+      <main className="dg-page" style={{ maxWidth: 480, margin: '0 auto', padding: 24, textAlign: 'center' }}>
         <div style={{ marginBottom: 16, textAlign: 'left' }}>
           <BackButton href="/online" label="線上模式" />
         </div>
@@ -199,7 +204,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
   // 送出的 room:join 請求，跳出這個表單讓使用者當場輸入暱稱後才加入房間。
   if (identity === null) {
     return (
-      <main style={{ maxWidth: 420, margin: '0 auto', padding: 24 }}>
+      <main className="dg-page" style={{ maxWidth: 420, margin: '0 auto', padding: 24 }}>
         <div style={{ marginBottom: 16 }}>
           <BackButton href="/online" label="線上模式" />
         </div>
@@ -249,9 +254,26 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
 
   if (!room) {
     return (
-      <main style={{ maxWidth: 480, margin: '0 auto', padding: 24, textAlign: 'center' }}>
+      <main className="dg-page" style={{ maxWidth: 480, margin: '0 auto', padding: 24, textAlign: 'center' }}>
         <p style={{ color: 'var(--ink-soft)' }}>連線中…</p>
       </main>
+    );
+  }
+
+  if (room.settings.mode === 'DRAW_TELEPHONE') {
+    return (
+      <TelephoneRoomView
+        room={room}
+        myPlayerId={myPlayerId}
+        yourTurn={telephoneYourTurn}
+        reveal={telephoneReveal}
+        leaveRoom={leaveRoom}
+        startGame={startGame}
+        updateSettings={updateSettings}
+        cancelAutoRestart={cancelAutoRestart}
+        submitGuess={submitTelephoneGuess}
+        submitDrawing={submitTelephoneDrawing}
+      />
     );
   }
 
@@ -284,7 +306,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
     room.status === 'playing' && room.roundPhase === 'drawing' && room.wordChosen && !roundEndInfo;
 
   return (
-    <main style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
+    <main className="dg-page" style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <BackButton href="/online" label="線上模式" onBeforeLeave={leaveRoom} />
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -333,7 +355,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
       </div>
 
       <div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className="dg-canvas-row" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>
           <Toolbar
             color={color}
             width={width}
@@ -346,27 +368,15 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
             disabled={!canDrawNow}
           />
 
-          <div
-            style={{
-              position: 'relative',
-              width: 'clamp(260px, 40vw, 820px)',
-              aspectRatio: '8 / 5',
-              borderRadius: 'var(--radius-md)',
-              border: '2px solid var(--ink)',
-              boxShadow: 'var(--shadow-md)',
-              overflow: 'hidden',
-            }}
-          >
-            <DrawingCanvas
-              ref={canvasHandleRef}
-              color={color}
-              width={width}
-              tool={tool}
-              disabled={!canDrawNow}
-            />
-
-            {overlayKind === 'lobby' && (
-              <StatusOverlay icon="clock" iconColor="var(--blue)" title="遊戲尚未開始">
+          {overlayKind === 'lobby' ? (
+            // lobby 疊層內容量遠比其他狀態多（房間代碼、邀請連結、分類/難度篩選、
+            // 開始按鈕），硬塞進畫布 aspect-ratio 容器裡在很多寬度下都會被壓得太扁、
+            // 需要捲動才看得完（就算加了 minHeight 下限也還是不夠，設定面板本身
+            // 就可能撐到好幾百 px 高）。改成獨立一塊「內容需要多高就多高」的區塊，
+            // 不再受畫布尺寸限制——這裡沿用 StatusOverlay 的 standalone 模式，
+            // 視覺上維持同樣的圖示+標題+外框樣式，只是不會被硬性裁切。
+            <div className="dg-canvas-frame">
+              <StatusOverlay standalone icon="clock" iconColor="var(--blue)" title="遊戲尚未開始">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
@@ -413,7 +423,33 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
                   <p style={{ color: 'var(--ink-soft)' }}>至少需要 2 人才能開始，等其他人加入</p>
                 )}
               </StatusOverlay>
-            )}
+            </div>
+          ) : (
+          <div
+            className="dg-canvas-frame dg-canvas-box"
+            style={{
+              position: 'relative',
+              // 高度不再用 aspect-ratio 或固定數字決定，改由 .dg-canvas-box 這個
+              // CSS class 搭配外層 row 的 alignItems:stretch 動態貼齊工具列的
+              // 實際高度（見 globals.css .dg-canvas-row／.dg-canvas-box 的說明）。
+              // 手機上改回用 aspect-ratio:1/1 決定高度，也是在 CSS class 裡處理，
+              // 不放在這裡的 inline style——inline style 的優先權比 CSS class 高，
+              // 之前 aspect-ratio 殘留在這裡曾經跟 CSS 給的固定高度疊加出不可
+              // 預期的計算結果，實際導致畫布在某些寬度下直接橫向溢出視窗。
+              borderRadius: 'var(--radius-md)',
+              border: '2px solid var(--ink)',
+              boxShadow: 'var(--shadow-md)',
+              overflow: 'hidden',
+            }}
+          >
+            <DrawingCanvas
+              ref={canvasHandleRef}
+              color={color}
+              width={width}
+              tool={tool}
+              disabled={!canDrawNow}
+            />
+
 
             {overlayKind === 'choosing' && (
               <StatusOverlay icon="pencil" iconColor="var(--accent)" title="選一個題目來畫">
@@ -546,6 +582,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
               </StatusOverlay>
             )}
           </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>

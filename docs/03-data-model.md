@@ -81,9 +81,19 @@ type RoundData =
     }
   | {
       mode: 'DRAW_TELEPHONE';
-      chain: { step: number; playerId: string; type: 'text' | 'drawing'; content: string }[];
+      /** 原始題目：只有接龍第一棒的人看得到，其他人要等 revealed 才看得到 */
+      originalWord: string;
+      /** 依隨機順序排列的整條接龍玩家 id，比賽開始時決定，中途不變動 */
+      chainOrder: string[];
+      /** 已經完成的每一棒：所有人（含最後一棒）都要畫，只有接龍第一棒沒有
+       *  guessText（沒有前一棒可以猜）。最後一棒的 guessText 就是整條接龍的
+       *  最終答案，不另外用獨立欄位存一份 */
+      entries: { playerId: string; displayName: string; strokes: Stroke[]; guessText?: string }[];
+      revealed: boolean;
     };
 ```
+
+實際實作跟上面這份草稿有出入：不是交替「文字/圖片」單一動作類型的鏈，而是「每一位（除了第一棒）都要先猜再畫」的合併動作——包含接龍最後一棒也要畫，不是猜完就結束；猜測文字本身不會被下一位看到（下一位只看得到「上一位畫的圖」跟自己的回合），只有最後 `revealed` 之後才會整條攤開給所有人看，這是這個玩法「傳話會走鐘」的核心機制。詳見 `05-roadmap.md` Phase 6 的完整設計說明。
 
 ### GuessMessage（DRAW_GUESS 用，猜題聊天室訊息）
 

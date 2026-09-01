@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 /**
  * 16 色蠟筆調色盤，依色相排列（暖色 -> 冷色 -> 中性色），
  * 刻意保留些微不均勻的視覺節奏，呼應「蠟筆盒」的手繪語彙。
@@ -22,6 +24,9 @@ const COLORS = [
   '#FF8FA3', // 粉紅
   '#8B5E3C', // 可可棕
 ];
+
+/** 跟 globals.css 的手機斷點（640px）保持一致 */
+const MOBILE_BREAKPOINT_QUERY = '(max-width: 640px)';
 
 function PencilIcon() {
   return (
@@ -74,11 +79,89 @@ interface ToolbarProps {
   disabled?: boolean;
 }
 
+function ColorSwatch({
+  c,
+  i,
+  size,
+  active,
+  onClick,
+}: {
+  c: string;
+  i: number;
+  size: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`選擇顏色 ${c}`}
+      aria-pressed={active}
+      onClick={onClick}
+      style={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        borderRadius: '50%',
+        background: c,
+        border: '2px solid var(--ink)',
+        boxShadow: active ? '0 0 0 2px var(--blue)' : 'none',
+        transform: active ? 'scale(1.12)' : `rotate(${(i % 3) - 1}deg)`,
+        cursor: 'pointer',
+        transition: 'transform 0.1s ease',
+      }}
+    />
+  );
+}
+
+function ToolIconButton({
+  onClick,
+  label,
+  active,
+  children,
+  flex,
+}: {
+  onClick: () => void;
+  label: string;
+  active?: boolean;
+  children: React.ReactNode;
+  flex?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="dg-btn"
+      style={{
+        width: flex ? undefined : 36,
+        height: 36,
+        flex: flex,
+        padding: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: active ? 'var(--amber-soft)' : 'var(--paper)',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 /**
- * 直向窄版工具列，設計給畫布左側使用，寬度控制在約 100px 以內，把版面主要空間讓給畫布。
- * 顏色排成 2 欄 x 8 列（原本 4 欄 x 4 列改窄），筆刷粗細滑桿改直向（CSS rotate
- * 搭配絕對定位置中，避免旋轉造成版面位移），筆刷/橡皮擦、復原/清空都改成純圖示
- * 按鈕，不放文字標籤，進一步壓縮寬度。
+ * 畫筆工具列。桌機是直向窄版（寬度約 100px），手機版改成橫向排列（顏色改成
+ * 換行的橫向多列、筆刷粗細滑桿改回正常橫向、整條工具列變成一個橫跨畫布上方
+ * 的橫條），不是用 CSS 硬蓋掉桌機版的 inline style——那種做法在這個專案先前
+ * 已經造成過好幾次跑版問題（CSS 動畫、CSS Grid 都出過事），這次改用 JS 判斷
+ * 螢幕寬度（跟 globals.css 的手機斷點 640px 保持一致），直接渲染兩種完全獨立、
+ * 各自簡單的版面結構，不會互相干擾。
+ *
+ * `isMobile` 預設 `false`（SSR 階段跟第一次 client 端渲染都拿不到真實視窗寬度，
+ * 為了避免 hydration mismatch，統一先假設是桌機版面，掛載後的 useEffect 才讀取
+ * 真正的視窗寬度並在需要時切換成手機版面）——實機在手機上開啟時會有一瞬間先
+ * 顯示桌機版面再切換過去，這是刻意接受的小小過渡效果，換取不會有 hydration 錯誤。
+ *
  * disabled（不是自己畫圖的時候）時整體變淡且不可互動，但仍佔位，
  * 避免版面在「輪到我畫」與「別人在畫」之間跳動。
  */
@@ -93,6 +176,65 @@ export function Toolbar({
   onClear,
   disabled = false,
 }: ToolbarProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  if (isMobile) {
+    return (
+      <div
+        className="dg-card"
+        style={{
+          padding: 10,
+          width: '100%',
+          maxWidth: 480,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          opacity: disabled ? 0.4 : 1,
+          pointerEvents: disabled ? 'none' : 'auto',
+        }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+          {COLORS.map((c, i) => (
+            <ColorSwatch key={c} c={c} i={i} size={30} active={color === c} onClick={() => onColorChange(c)} />
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="range"
+            min={2}
+            max={24}
+            value={width}
+            onChange={(e) => onWidthChange(Number(e.target.value))}
+            aria-label="筆刷粗細"
+            style={{ flex: 1, minWidth: 0 }}
+          />
+          <ToolIconButton
+            onClick={() => onToolChange(tool === 'pen' ? 'eraser' : 'pen')}
+            label={tool === 'pen' ? '切換成橡皮擦' : '切換成筆刷'}
+            active={tool === 'eraser'}
+          >
+            {tool === 'pen' ? <PencilIcon /> : <EraserIcon />}
+          </ToolIconButton>
+          <ToolIconButton onClick={onUndo} label="復原">
+            <UndoIcon />
+          </ToolIconButton>
+          <ToolIconButton onClick={onClear} label="清空畫布">
+            <TrashIcon />
+          </ToolIconButton>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="dg-card"
@@ -100,6 +242,13 @@ export function Toolbar({
         padding: 8,
         width: 100,
         flexShrink: 0,
+        // 自己顯式宣告 alignSelf + height，不依賴外層容器有沒有記得設定
+        // alignItems: 'flex-start'——外層 row 如果漏設（預設值是 stretch），這個
+        // 卡片就會被拉伸到跟旁邊的畫布一樣高，變成一長條、下半部一大片空白，
+        // 是實際發生過的跑版問題。這裡直接在元件自己身上做防禦，不管被哪個
+        // 頁面包住都不會被拉伸。
+        alignSelf: 'flex-start',
+        height: 'fit-content',
         opacity: disabled ? 0.4 : 1,
         pointerEvents: disabled ? 'none' : 'auto',
       }}

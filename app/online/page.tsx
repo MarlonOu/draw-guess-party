@@ -50,6 +50,7 @@ export default function OnlineLobbyPage() {
   const [mobileTab, setMobileTab] = useState<'create' | 'join'>('create');
 
   const [createName, setCreateName] = useState('');
+  const [mode, setMode] = useState<'DRAW_GUESS' | 'DRAW_TELEPHONE'>('DRAW_GUESS');
   const [roundDurationSec, setRoundDurationSec] = useState(60);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -85,6 +86,7 @@ export default function OnlineLobbyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           displayName: createName.trim(),
+          mode,
           roundDurationSec,
           categoryFilter: selectedCategories,
           difficultyFilter: selectedDifficulties,
@@ -117,7 +119,7 @@ export default function OnlineLobbyPage() {
   };
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 24 }}>
+    <main className="dg-page" style={{ maxWidth: 480, margin: '0 auto', padding: 24 }}>
       <div style={{ marginBottom: 16 }}>
         <BackButton href="/" label="首頁" />
       </div>
@@ -153,19 +155,21 @@ export default function OnlineLobbyPage() {
         </button>
       </div>
 
-      <div
-        className="dg-card"
-        style={{
-          padding: '10px 14px',
-          marginBottom: 16,
-          background: 'var(--blue-soft)',
-          boxShadow: 'none',
-          fontSize: 13,
-        }}
-      >
-        <strong>計分規則：</strong>猜中的人依當下剩餘時間拿 1~10 分，越早猜中分數越高；
-        猜對了，畫圖者也跟著加 5 分。時間到都沒人猜中，這輪雙方都不得分。
-      </div>
+      {mode === 'DRAW_GUESS' && (
+        <div
+          className="dg-card dg-mode-note"
+          style={{
+            padding: '10px 14px',
+            marginBottom: 16,
+            background: 'var(--blue-soft)',
+            boxShadow: 'none',
+            fontSize: 13,
+          }}
+        >
+          <strong>計分規則：</strong>猜中的人依當下剩餘時間拿 1~10 分，越早猜中分數越高；
+          猜對了，畫圖者也跟著加 5 分。時間到都沒人猜中，這輪雙方都不得分。
+        </div>
+      )}
 
       {mobileTab === 'create' ? (
         <section className="dg-card" style={{ padding: 20 }}>
@@ -181,19 +185,53 @@ export default function OnlineLobbyPage() {
           />
 
           <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-            每輪限時
+            遊戲模式
           </label>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            {ROUND_DURATIONS.map((sec) => (
-              <ChipToggle
-                key={sec}
-                active={roundDurationSec === sec}
-                onClick={() => setRoundDurationSec(sec)}
-              >
-                {sec} 秒
-              </ChipToggle>
-            ))}
+            <ChipToggle active={mode === 'DRAW_GUESS'} onClick={() => setMode('DRAW_GUESS')}>
+              你畫我猜
+            </ChipToggle>
+            <ChipToggle active={mode === 'DRAW_TELEPHONE'} onClick={() => setMode('DRAW_TELEPHONE')}>
+              畫圖接龍
+            </ChipToggle>
           </div>
+
+          {mode === 'DRAW_TELEPHONE' && (
+            <div
+              className="dg-card dg-mode-note"
+              style={{
+                padding: '10px 14px',
+                marginBottom: 16,
+                background: 'var(--amber-soft)',
+                boxShadow: 'none',
+                fontSize: 13,
+              }}
+            >
+              <strong>玩法：</strong>至少需要 3 人才能開始。第一位隨機拿到題目並開始畫，
+              之後每一位都要先猜前一棒畫的是什麼、再畫下自己的猜測，最後一位猜完後
+              直接公布原始題目跟整條接龍的所有作品。猜測限時 25 秒、作畫限時 60 秒，
+              不受下面的「每輪限時」影響（那個設定只有「你畫我猜」模式在用）。
+            </div>
+          )}
+
+          {mode === 'DRAW_GUESS' && (
+            <>
+              <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                每輪限時
+              </label>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                {ROUND_DURATIONS.map((sec) => (
+                  <ChipToggle
+                    key={sec}
+                    active={roundDurationSec === sec}
+                    onClick={() => setRoundDurationSec(sec)}
+                  >
+                    {sec} 秒
+                  </ChipToggle>
+                ))}
+              </div>
+            </>
+          )}
 
           <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6 }}>
             分類篩選（不選代表全部）
