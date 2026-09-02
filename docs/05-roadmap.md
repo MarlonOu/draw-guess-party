@@ -557,5 +557,14 @@
 - 使用者要求把上一輪全站性的 `.dg-page { width: 100% }` 撤回，改成只在真正需要的情境（公布結果畫廊）才生效，範圍縮到最小
 - **做法**：從 `globals.css` 的 `.dg-page` class 移除 `width: 100%`（連同對應的說明註解一併移除，避免留下跟實際程式碼不符的過時說明），改成只在 `TelephoneRoomView.tsx` 的 `<main>` inline style 裡，用 `...(isRevealing ? { width: '100%' } : {})` 這種條件式展開的寫法，只有在 `isRevealing`（公布結果畫廊顯示中）這個特定狀態才會加上 `width:'100%'`，其餘任何狀態（lobby、選題中、作畫中……）跟其他頁面完全不受影響、維持原本的 `width:auto` 行為
 - 已通過：`tsc`／`eslint`／`next build` 全數通過；直接檢查編譯後的最終 CSS 產物確認 `.dg-page` class 已經不再有 `width:100%` 規則（撤回成功）；直接檢查編譯後的最終 JS 產物，確認條件式的 `width:"100%"` 只出現在 `isRevealing` 為真時才會展開進 `<main>` 的 style 物件；端對端功能回歸測試確認接龍模式完整流程沒有受影響，額外確認首頁／`/online`／`/admin` 三個頁面依然正常回應
+
+## 修正真實功能性 bug：接龍模式的復原／清空按鈕完全無效
+
+- 使用者回報：接龍模式作畫時，工具列的返回（復原）跟刪除（清空）按鈕都沒有反應
+- **根因**：`stroke.ts` 的 `canvas:clear`／`canvas:undo` handler，伺服器內部的筆畫緩衝區（`clearStrokeBuffer`／`buffer.pop()`）在兩種模式下都有正確執行，問題出在「通知客戶端更新畫面」這一步——原本的判斷式 `if (room.settings.mode !== 'DRAW_TELEPHONE') { io.to(joinCode).emit(...) }` 是為了維持接龍模式「作畫過程中除了自己誰都不該即時看到內容」這個既有設計，但用錯了方法：這個判斷式把事件整個包起來，連**畫圖者自己**都一併被排除在外了。DrawingCanvas 的復原／清空是完全事件驅動的（前端的 `onCanvasClear`／`onCanvasUndo` 處理函式，只有在收到對應的 socket 事件時才會真的去清空／復原本地畫布），這個事件在接龍模式下從來沒有送出過，導致伺服器狀態雖然正確更新了，前端畫面卻完全沒反應
+- **修法**：拆成兩步——`socket.emit(...)`（只送給發起這個動作的人自己，不管哪個模式都要送，讓自己的畫布正確反映復原/清空結果）＋`socket.to(joinCode).emit(...)`（廣播給房間裡其他人，只有非 DRAW_TELEPHONE 模式才需要），兩者合起來剛好等於原本 DRAW_GUESS 模式 `io.to(joinCode).emit(...)` 的效果（送給包含自己在內的整個房間），DRAW_GUESS 模式的行為完全不變，只有接龍模式從「完全不送」修正成「送給自己、不送給別人」
+- **已通過兩項端對端測試，都是真實模擬多人連線與畫圖動作，不是只檢查程式碼邏輯**：
+  1. 接龍模式：畫圖者畫一筆、送出復原、送出清空，確認畫圖者自己確實收到了 `canvas:undo`／`canvas:clear` 事件（bug 修好了），同時確認房間裡另外兩位旁觀者都沒有收到這兩個事件（接龍模式「別人看不到正在畫的內容」的原有設計沒有被破壞）
+  2. DRAW_GUESS 模式：確認畫圖者跟猜題的另一位玩家都能即時收到復原／清空事件，維持修改前的行為，沒有被這次改動誤傷
 - 比照音樂猜歌專案：Vultr VPS、PostgreSQL、Cloudflare Tunnel（沿用同一帳號另開子網域）、systemd 服務（`ExecStart` 改為執行 `tsx server.ts` 或先 `next build` 再啟動，需視正式環境是否安裝 `tsx` 決定）
 - 行動裝置實測、效能檢查

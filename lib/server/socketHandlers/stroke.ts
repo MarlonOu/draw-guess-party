@@ -112,8 +112,16 @@ export function registerStrokeHandlers(io: Server, socket: Socket) {
     if (!room || !canDraw(room, playerId)) return;
 
     clearStrokeBuffer(room);
+    // 這裡曾經是一個真實的 bug：接龍模式「不轉發給其他人」的判斷式，把畫圖者
+    // 自己也一併排除掉了——DRAW_TELEPHONE 刻意不讓其他人即時看到畫面內容沒錯，
+    // 但清空／復原這個動作，畫圖者自己一定要收到才能讓自己的畫布真的清空／
+    // 復原，不然按鈕點了伺服器內部狀態雖然有更新，畫面卻完全沒反應。
+    // `socket.emit(...)` 只送給發起這個事件的人自己（不管哪個模式都要送）；
+    // 廣播給「房間裡其他人」（`socket.to(joinCode).emit(...)`，不含自己）才是
+    // 只有非 DRAW_TELEPHONE 模式需要做的事。
+    socket.emit('canvas:clear', { playerId });
     if (room.settings.mode !== 'DRAW_TELEPHONE') {
-      io.to(joinCode).emit('canvas:clear', { playerId });
+      socket.to(joinCode).emit('canvas:clear', { playerId });
     }
   });
 
@@ -126,8 +134,10 @@ export function registerStrokeHandlers(io: Server, socket: Socket) {
 
     const buffer = getStrokeBuffer(room);
     buffer?.pop();
+    // 理由同上面 canvas:clear：畫圖者自己一定要收到才能讓自己的畫布真的復原。
+    socket.emit('canvas:undo', { playerId });
     if (room.settings.mode !== 'DRAW_TELEPHONE') {
-      io.to(joinCode).emit('canvas:undo', { playerId });
+      socket.to(joinCode).emit('canvas:undo', { playerId });
     }
   });
 }
