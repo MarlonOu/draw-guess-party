@@ -4,6 +4,7 @@ interface RoomSettingsValue {
   roundDurationSec: number;
   categoryFilter: string[];
   difficultyFilter: string[];
+  telephoneFlow?: 'combined' | 'alternating';
 }
 
 interface RoomSettingsPanelProps {
@@ -13,6 +14,8 @@ interface RoomSettingsPanelProps {
   onUpdate: (patch: Partial<RoomSettingsValue>) => void;
   /** DRAW_TELEPHONE 模式沒有「每輪秒數」這個設定（用固定的猜測/作畫限時），隱藏那一區塊 */
   showRoundDuration?: boolean;
+  /** 只有 DRAW_TELEPHONE 模式會傳 true，用來決定要不要顯示「接龍流程」切換 */
+  showTelephoneFlow?: boolean;
 }
 
 const ROUND_DURATIONS = [30, 60, 90, 120];
@@ -76,7 +79,10 @@ export function RoomSettingsPanel({
   isHost,
   onUpdate,
   showRoundDuration = true,
+  showTelephoneFlow = false,
 }: RoomSettingsPanelProps) {
+  const telephoneFlowText = settings.telephoneFlow === 'alternating' ? '奇數畫偶數猜' : '每人先猜再畫';
+
   if (!isHost) {
     const categoryText = settings.categoryFilter.length === 0 ? '全部' : settings.categoryFilter.join('、');
     const difficultyText =
@@ -87,7 +93,10 @@ export function RoomSettingsPanel({
             .join('、');
     return (
       <p style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'left' }}>
-        目前設定：{settings.roundDurationSec} 秒／分類 {categoryText}／難度 {difficultyText}
+        目前設定：
+        {showRoundDuration && `${settings.roundDurationSec} 秒／`}
+        分類 {categoryText}／難度 {difficultyText}
+        {showTelephoneFlow && `／流程 ${telephoneFlowText}`}
       </p>
     );
   }
@@ -121,6 +130,28 @@ export function RoomSettingsPanel({
         textAlign: 'left',
       }}
     >
+      {showTelephoneFlow && (
+        <div style={{ width: '100%' }}>
+          <SectionLabel>接龍流程</SectionLabel>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            <Chip
+              active={(settings.telephoneFlow ?? 'combined') === 'combined'}
+              onClick={() => onUpdate({ telephoneFlow: 'combined' })}
+              compact
+            >
+              每人先猜再畫
+            </Chip>
+            <Chip
+              active={settings.telephoneFlow === 'alternating'}
+              onClick={() => onUpdate({ telephoneFlow: 'alternating' })}
+              compact
+            >
+              奇數畫偶數猜（人多推薦）
+            </Chip>
+          </div>
+        </div>
+      )}
+
       {showRoundDuration && (
         <div style={{ width: '100%' }}>
           <SectionLabel>每輪秒數</SectionLabel>

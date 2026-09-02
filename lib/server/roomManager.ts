@@ -637,10 +637,11 @@ export interface RoomSettingsPatch {
   roundDurationSec?: number;
   categoryFilter?: string[];
   difficultyFilter?: string[];
+  telephoneFlow?: 'combined' | 'alternating';
 }
 
 /**
- * 修改房間設定（每輪限時、分類篩選、難度篩選）。
+ * 修改房間設定（每輪限時、分類篩選、難度篩選、接龍流程）。
  * 輸入：房間、要求修改的玩家 id、要修改的欄位
  * 輸出：是否修改成功
  * 邊界條件：
@@ -648,6 +649,9 @@ export interface RoomSettingsPatch {
  *  - 只有房間還在 lobby 階段可以改，比賽進行中或已結束時修改設定沒有意義
  *    （進行中的比賽早就用當初的設定決定好題庫跟輪數了，中途改不會回頭套用）
  *  - roundDurationSec 限制在 15~180 秒之間，避免被亂改成 0 秒或幾小時這種不合理的值
+ *  - telephoneFlow 只有 mode === 'DRAW_TELEPHONE' 才允許修改，其他模式的房間
+ *    這個設定沒有意義，直接忽略這個欄位（不報錯，只是不生效），避免非接龍模式
+ *    的房間莫名其妙帶著一個永遠用不到的設定被改動
  */
 export function updateRoomSettings(
   room: RoomState,
@@ -666,6 +670,9 @@ export function updateRoomSettings(
   }
   if (patch.difficultyFilter !== undefined) {
     room.settings.difficultyFilter = patch.difficultyFilter.filter((d) => typeof d === 'string');
+  }
+  if (patch.telephoneFlow !== undefined && room.settings.mode === 'DRAW_TELEPHONE') {
+    room.settings.telephoneFlow = patch.telephoneFlow === 'alternating' ? 'alternating' : 'combined';
   }
   return true;
 }
@@ -727,12 +734,24 @@ export function beginTelephoneGame(
 }
 
 /**
- * 目前輪到的人送出對「前一棒的畫」的猜測。所有玩家（含接龍最後一棒）都走同一套
- * 「先猜、再畫」流程，不再有「最後一棒只猜不畫」的特例——猜完一律進入作畫階段，
+ * 目前輪到的人送出對「前一棒的畫」的猜測。
+ *
+ * 'combined' 流程（原本唯一的玩法，這段邏輯完全不變）：所有玩家（含接龍最後一棒）
+ * 都走同一套「先猜、再畫」——猜完一律進入 drawing 子階段，同一個人接著畫，
  * 是不是真的還有「下一位」交棒，留給 submitTelephoneDrawing 交出畫作之後才判斷。
+ *
+ * 'alternating' 流程（新玩法）：猜測本身就是這一位的完整回合，不會接著自己畫——
+ * 直接產生一筆「純猜測」的 entry（strokes 給空陣列，guessText 是猜測文字本身，
+ * 見 TelephoneEntry 的說明），然後直接推進到下一位，不像 combined 流程那樣把
+ * 猜測暫存在 pendingGuessText、等同一個人畫完才一起打包成一筆 entry。
+ *
  * 輸出：
  *  - null：不符合條件（不是他的回合、房間不是接龍模式、已經公布過了……）
- *  - { playerId; promptText }：這個人接著要用自己剛才的猜測文字（promptText）去畫
+ *  - { playerId; promptText }：'combined' 流程下，這個人接著要用 promptText 去畫；
+ *    'alternating' 流程下，promptText 純粹回傳猜測內容本身供呼叫端記錄用途，
+ *    呼叫端（telephoneOrchestrator 的 advanceTelephone）實際上只把回傳值當
+ *    truthy/falsy 判斷用，不會解構讀取內容，接下來該對誰做什麼一律重新讀取
+ *    room.telephone 的最新狀態決定，這裡回傳什麼形狀都不影響呼叫端的控制流程。
  *
  * 猜測文字統一裁切到 60 字、去除頭尾空白，避免整段貼上的內容把畫面撐爆；
  * 空字串一律視為「（空白）」，維持接龍鏈上每一棒都有內容可以往下傳。
@@ -747,6 +766,36 @@ export function submitTelephoneGuess(
   if (t.chainOrder[t.currentIndex] !== playerId) return null;
 
   const trimmed = text.trim().slice(0, 60) || '（空白）';
+
+  if (room.settings.telephoneFlow === 'alternating') {
+    const player = room.players.get(playerId);
+    t.entries.push({
+      playerId,
+      displayName: player?.displayName ?? '離線玩家',
+      strokes: [],
+      guessText: trimmed,
+    });
+    t.currentStrokes = [];
+
+    const presentIds = new Set(room.players.keys());
+    const nextIndex = findNextActiveIndex(t.chainOrder, t.currentIndex, presentIds);
+
+    if (nextIndex === null) {
+      t.revealed = true;
+      t.subPhase = null;
+      t.subPhaseStartedAt = null;
+      return { playerId, promptText: trimmed };
+    }
+
+    t.currentIndex = nextIndex;
+    // 奇偶決定下一位是畫還是猜——用最終落點的 index 判斷（不是單純 +1），
+    // 中途有人離線被跳過時依然正確：跟 beginTelephoneGame 給第一棒（index 0，
+    // 偶數）'drawing' 的邏輯一致，偶數 index 畫、奇數 index 猜。
+    t.subPhase = nextIndex % 2 === 0 ? 'drawing' : 'guessing';
+    t.subPhaseStartedAt = Date.now();
+    return { playerId, promptText: trimmed };
+  }
+
   t.pendingGuessText = trimmed;
   t.subPhase = 'drawing';
   t.subPhaseStartedAt = Date.now();
@@ -755,12 +804,19 @@ export function submitTelephoneGuess(
 }
 
 /**
- * 目前輪到的人交出這一棒的畫作，推進到接龍下一位。
+ * 目前輪到的人交出這一棒的畫作。
+ *
+ * 'combined' 流程（原本唯一的玩法，這段邏輯完全不變）：推進到下一位，下一位子階段
+ * 一律是 guessing（接龍第一棒以外，每一位都是先猜再畫，包含接龍最後一棒——最後一棒
+ * 猜完一樣要畫，畫完交出去之後才會因為「找不到下一位」而觸發公布階段）。
+ *
+ * 'alternating' 流程（新玩法）：這一位的回合到交出畫作就結束了，不會有猜測要
+ * 一起打包（entry 的 guessText 保持 undefined，見 TelephoneEntry 的說明），
+ * 推進到下一位時用奇偶決定對方是畫還是猜。
+ *
  * 輸出：
  *  - null：不符合條件
- *  - { advanced: true; nextPlayerId }：正常推進到下一位，下一位子階段一律是 guessing
- *    （接龍第一棒以外，每一位都是先猜再畫，包含接龍最後一棒——最後一棒猜完一樣要畫，
- *    畫完交出去之後才會因為「找不到下一位」而觸發下面的公布階段）
+ *  - { advanced: true; nextPlayerId }：正常推進到下一位
  *  - { advanced: false }：已經是接龍最後一棒交出畫作、或後面的人陸續都離開了找不到
  *    下一個還在房間裡的人，兩種情況都直接進入公布階段
  */
@@ -772,12 +828,13 @@ export function submitTelephoneDrawing(
   if (!t || t.revealed || t.subPhase !== 'drawing') return null;
   if (t.chainOrder[t.currentIndex] !== playerId) return null;
 
+  const isAlternating = room.settings.telephoneFlow === 'alternating';
   const player = room.players.get(playerId);
   t.entries.push({
     playerId,
     displayName: player?.displayName ?? '離線玩家',
     strokes: t.currentStrokes,
-    guessText: t.pendingGuessText ?? undefined,
+    guessText: isAlternating ? undefined : (t.pendingGuessText ?? undefined),
   });
   t.pendingGuessText = null;
   t.currentStrokes = [];
@@ -793,7 +850,7 @@ export function submitTelephoneDrawing(
   }
 
   t.currentIndex = nextIndex;
-  t.subPhase = 'guessing';
+  t.subPhase = isAlternating ? (nextIndex % 2 === 0 ? 'drawing' : 'guessing') : 'guessing';
   t.subPhaseStartedAt = Date.now();
   return { advanced: true, nextPlayerId: t.chainOrder[nextIndex] };
 }

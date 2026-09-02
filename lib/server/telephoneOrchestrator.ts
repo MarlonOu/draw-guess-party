@@ -59,7 +59,19 @@ export function sendYourTurn(io: Server, room: RoomState): void {
     });
     scheduleTimeout(io, room, GUESS_TIMEOUT_MS);
   } else if (t.subPhase === 'drawing') {
-    const promptText = t.currentIndex === 0 ? (t.originalWord ?? '') : (t.pendingGuessText ?? '');
+    // 提示文字的來源依流程分開判斷：
+    //  - 接龍第一棒（不管哪種流程）：系統隨機抽的原始題目
+    //  - 'combined' 流程：自己剛才在同一次輪到自己時送出的猜測文字（暫存在
+    //    pendingGuessText，兩者是同一個人、同一次回合內先後發生）
+    //  - 'alternating' 流程：猜跟畫是不同人分開做的獨立回合，不會有
+    //    pendingGuessText 這回事（見 submitTelephoneGuess），提示文字要讀
+    //    entries 陣列最後一筆——那一筆正是剛才「猜」的那個人交出的猜測 entry
+    const promptText =
+      t.currentIndex === 0
+        ? (t.originalWord ?? '')
+        : room.settings.telephoneFlow === 'alternating'
+          ? (t.entries[t.entries.length - 1]?.guessText ?? '')
+          : (t.pendingGuessText ?? '');
     io.to(player.socketId).emit('telephone:yourTurn', {
       subPhase: 'drawing',
       promptText,

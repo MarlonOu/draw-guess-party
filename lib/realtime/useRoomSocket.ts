@@ -238,7 +238,12 @@ export function useRoomSocket() {
   }, []);
 
   const updateSettings = useCallback(
-    (patch: { roundDurationSec?: number; categoryFilter?: string[]; difficultyFilter?: string[] }) => {
+    (patch: {
+      roundDurationSec?: number;
+      categoryFilter?: string[];
+      difficultyFilter?: string[];
+      telephoneFlow?: 'combined' | 'alternating';
+    }) => {
       getSocket().emit('room:updateSettings', patch);
     },
     []

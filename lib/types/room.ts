@@ -14,9 +14,33 @@ export interface RoomSettings {
   roundDurationSec: number;
   categoryFilter: string[];
   difficultyFilter: string[];
+  /**
+   * 只有 mode === 'DRAW_TELEPHONE' 時才有意義，其餘模式忽略這個欄位。
+   *  - 'combined'（預設，即原本唯一的玩法）：除了第一棒（沒有前一棒可猜）以外，
+   *    每一位都是「先猜前一棒的畫、再畫下自己的猜測」，猜跟畫是同一個人在同一次
+   *    輪到自己時連續完成，一棒＝一次「猜+畫」。
+   *  - 'alternating'（新玩法，用來解決人數過多時每一棒都要「猜+畫」導致總時長
+   *    過長的問題）：猜跟畫拆給不同人做，接龍順序裡奇數位（第1、3、5...棒）只畫、
+   *    偶數位（第2、4、6...棒）只猜（猜的對象一樣是「上一位畫的」），沒有人需要
+   *    在同一次輪到自己時同時做兩件事，總棒數雖然不變，但每一棒只需要做一半的事，
+   *    整場遊戲的總時長可以壓在原本「猜+畫」流程的一半左右。
+   */
+  telephoneFlow: 'combined' | 'alternating';
 }
 
-/** DRAW_TELEPHONE 模式：接龍裡已經完成的一棒。 */
+/**
+ * DRAW_TELEPHONE 模式：接龍裡已經完成的一棒。
+ *
+ * 'combined' 流程（見 RoomSettings.telephoneFlow）：strokes 一定有內容（唯一例外是
+ * 玩家逾時/斷線被自動代打交出空白畫布），guessText 除了第一棒以外都會有值
+ * （這個人對上一棒的猜測，接著才畫下這個猜測）。
+ *
+ * 'alternating' 流程：猜跟畫拆成兩種不同性質的 entry，靠 strokes 是否為空陣列來
+ * 分辨是哪一種——
+ *  - 畫的 entry：strokes 有內容，guessText 是 undefined
+ *  - 猜的 entry：strokes 是空陣列 []，guessText 有內容（猜測文字本身）
+ * 前端畫廊渲染時要依此分開處理，不能假設每個 entry 都同時有畫布內容可以顯示。
+ */
 export interface TelephoneEntry {
   playerId: string;
   displayName: string;
@@ -27,9 +51,11 @@ export interface TelephoneEntry {
 
 /**
  * DRAW_TELEPHONE 模式：整條接龍結束後的完整公布內容。
- * 沒有獨立的「最終猜測」欄位——現在所有玩家（含接龍最後一棒）都是「先猜再畫」，
- * 最後一棒的猜測就是 entries 陣列最後一筆的 guessText，跟其他棒次同一套結構，
- * 不需要另外特例處理。
+ * 'combined' 流程沒有獨立的「最終猜測」欄位——所有玩家（含接龍最後一棒）都是
+ * 「先猜再畫」，最後一棒的猜測就是 entries 陣列最後一筆的 guessText，跟其他棒次
+ * 同一套結構，不需要另外特例處理。'alternating' 流程則是猜跟畫各自獨立成一筆
+ * entry（見 TelephoneEntry 的說明），entries 長度固定等於接龍人數，跟 'combined'
+ * 流程一致，只是內容組成方式不同。
  */
 export interface TelephoneReveal {
   originalWord: string;

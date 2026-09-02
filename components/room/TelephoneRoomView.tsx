@@ -226,6 +226,51 @@ export function TelephoneRoomView({
                 animationDelay: `${i * pulseSegment}s`,
                 '--pulse-duration': `${pulseDuration}s`,
               };
+              // 'alternating' 流程下，猜測本身自成一筆 entry，沒有搭配的畫布內容
+              // （strokes 是空陣列）——這種 entry 不能套用「畫布 + 底下附一行猜測」
+              // 的呈現方式，那樣會顯示一個空白畫布框加上「（沒有畫）」，容易誤會
+              // 成「這個人沒畫東西」，但其實這一棒本來就只需要猜、不需要畫。
+              // 用 strokes.length===0 且 guessText 有值判斷：'combined' 流程裡
+              // 「有 guessText 的 entry」一定也同時有 strokes（同一個人猜完接著畫），
+              // 唯一會出現「沒有 strokes、卻有 guessText」的情況就是 'alternating'
+              // 流程的猜測 entry，兩種流程用同一個條件就能正確分辨、不需要另外
+              // 把 telephoneFlow 傳進這裡判斷。
+              const isGuessOnly = entry.strokes.length === 0 && entry.guessText !== undefined;
+
+              if (isGuessOnly) {
+                return (
+                  <div key={`${entry.playerId}-${i}`} className="dg-card dg-reveal-card" style={cardStyle}>
+                    <p style={{ fontSize: 12, fontWeight: 800, marginBottom: 6, textAlign: 'center' }}>
+                      第 {i + 1} 棒：{entry.displayName}（猜）
+                    </p>
+                    <div
+                      style={{
+                        width: '100%',
+                        aspectRatio: '8 / 5',
+                        border: '2px solid var(--ink)',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'var(--amber-soft)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 12,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 800,
+                          color: i === reveal.entries.length - 1 ? 'var(--accent-ink)' : 'var(--ink)',
+                        }}
+                      >
+                        {entry.guessText}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div key={`${entry.playerId}-${i}`} className="dg-card dg-reveal-card" style={cardStyle}>
                   <p style={{ fontSize: 12, fontWeight: 800, marginBottom: 6, textAlign: 'center' }}>
@@ -326,6 +371,7 @@ export function TelephoneRoomView({
                 isHost={isHost}
                 onUpdate={updateSettings}
                 showRoundDuration={false}
+                showTelephoneFlow
               />
 
               {connectedPlayerCount >= TELEPHONE_MIN_PLAYERS ? (
