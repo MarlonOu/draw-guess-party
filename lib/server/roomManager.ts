@@ -64,6 +64,13 @@ export interface TelephoneState {
   pendingGuessText: string | null;
   /** 目前這一位正在畫的筆畫（即時累積，這一棒交出去後打包進 entries，開始新的一棒時清空） */
   currentStrokes: Stroke[];
+  /**
+   * 公布階段（revealed 為 true 之後）的「準備好下一場」投票名單。原本是只有房主
+   * 能點一個按鈕直接返回大廳，改成每個人都要各自按下「我準備好了」表態，等目前
+   * 連線中的所有玩家都投票之後才會自動返回大廳——見 voteReadyForNextRound。
+   * revealed 為 false 時固定是空集合，沒有意義。
+   */
+  readyForNextRoundIds: Set<string>;
 }
 
 export interface RoomState {
@@ -357,6 +364,7 @@ function toTelephoneSummary(room: RoomState): TelephoneSummary | null {
           entries: t.entries,
         }
       : null,
+    readyForNextRoundIds: Array.from(t.readyForNextRoundIds),
   };
 }
 
@@ -728,6 +736,7 @@ export function beginTelephoneGame(
     entries: [],
     pendingGuessText: null,
     currentStrokes: [],
+    readyForNextRoundIds: new Set(),
   };
 
   return { firstPlayerId: chainOrder[0], word };
@@ -878,4 +887,62 @@ export function autoSubmitTelephoneTurn(
     return submitTelephoneDrawing(room, activePlayerId);
   }
   return null;
+}
+
+/**
+ * 檢查公布階段是不是所有「目前連線中」的玩家都已經投過「準備好下一場」的票，
+ * 是的話直接呼叫 returnToLobby。拆成獨立函式的原因：這個檢查需要在兩個不同的
+ * 時間點各自觸發——(1) 有人主動投票時（voteReadyForNextRound）、(2) 投票階段
+ * 有人斷線被硬移除時（見 socketHandlers/room.ts 的 performRemoval）。第二種
+ * 情況如果沒有重新檢查一次，會發生「原本 3 人差 1 票，那個沒投票的人自己先斷線
+ * 被移除，剩下 2 人早就都投過票了，卻永遠等不到會自動觸發返回大廳的下一次投票」
+ * 這種房間卡死的邊界情況——連線人數變少了，門檻也要跟著重新算一次。
+ * 回傳是否真的觸發了 returnToLobby。
+ */
+export function checkTelephoneVotesAndMaybeReturn(room: RoomState): boolean {
+  const t = room.telephone;
+  if (!t || !t.revealed) return false;
+
+  const connectedCount = countConnectedPlayers(room);
+  const readyConnectedCount = Array.from(t.readyForNextRoundIds).filter(
+    (id) => room.players.get(id)?.connected
+  ).length;
+
+  if (connectedCount > 0 && readyConnectedCount >= connectedCount) {
+    returnToLobby(room);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 公布階段（作品列表）的「準備好下一場」投票。原本是只有房主能按一個按鈕直接
+ * 返回大廳，改成每個人都要各自表態——這個函式只負責記錄這個人投了票，並判斷
+ * 是不是所有目前連線中的玩家都投票了；真的都投齊了才會呼叫 returnToLobby，
+ * 不是投了票就立刻返回。
+ *
+ * 輸入：房間、投票的玩家 id
+ * 輸出：
+ *  - null：不符合條件（房間不是接龍模式、還沒進入公布階段、房間已經回到 lobby
+ *    了、這個玩家不在房間裡……），呼叫端據此判斷要不要廣播房間狀態
+ *  - { allReady: boolean }：投票成功，allReady 代表這一票是不是剛好湊滿所有
+ *    連線中的玩家（湊滿的話，這個函式內部已經呼叫過 returnToLobby，房間狀態
+ *    已經是全新的 lobby 了，呼叫端不需要另外處理）
+ *
+ * 邊界條件：
+ *  - 用「目前連線中」的人數當門檻，不是「接龍開始當下」的人數——公布階段可能
+ *    有人已經離開了，門檻應該看現在還在的人，不然少一個人永久投不滿、房間卡死
+ *    （這個門檻在有人斷線被移除時也會重新檢查一次，見 checkTelephoneVotesAndMaybeReturn）
+ *  - 同一個人重複投票是安全的（Set 天生防重複），不會被算成兩票
+ *  - 投票名單只在公布階段（revealed 為 true）才有意義，其餘任何時候呼叫都直接
+ *    回傳 null，不會不小心把還沒開始猜/畫的接龍過程誤判成投票
+ */
+export function voteReadyForNextRound(room: RoomState, playerId: string): { allReady: boolean } | null {
+  const t = room.telephone;
+  if (!t || !t.revealed) return null;
+  if (!room.players.has(playerId)) return null;
+
+  t.readyForNextRoundIds.add(playerId);
+  const allReady = checkTelephoneVotesAndMaybeReturn(room);
+  return { allReady };
 }

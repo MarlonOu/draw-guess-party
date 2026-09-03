@@ -92,6 +92,13 @@ export interface TelephoneSummary {
   totalPlayers: number;
   /** 只有進入公布階段才非 null */
   reveal: TelephoneReveal | null;
+  /**
+   * 公布階段（作品列表）的「準備好下一場」投票名單，只有 reveal 非 null 時才有
+   * 意義。原本是只有房主能按一個按鈕直接返回大廳，改成每個人都要各自投票表態，
+   * 等目前連線中的所有玩家都投票了才會自動返回大廳。前端用這個陣列的長度跟
+   * players 裡連線中的人數比對，顯示「X / Y 人已準備」的進度。
+   */
+  readyForNextRoundIds: string[];
 }
 
 export interface RoomSummary {

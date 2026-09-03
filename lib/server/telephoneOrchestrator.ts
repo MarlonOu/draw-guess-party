@@ -5,6 +5,7 @@ import {
   submitTelephoneGuess,
   submitTelephoneDrawing,
   autoSubmitTelephoneTurn,
+  voteReadyForNextRound,
   toRoomSummary,
 } from './roomManager';
 import { wordRepository } from '../repository/wordRepository';
@@ -154,6 +155,19 @@ export function handleTelephoneGuessSubmit(
 
 export function handleTelephoneDrawingSubmit(io: Server, room: RoomState, playerId: string): void {
   advanceTelephone(io, room, submitTelephoneDrawing(room, playerId));
+}
+
+/**
+ * 公布階段的「準備好下一場」投票。不能直接沿用 advanceTelephone（那個函式在
+ * result 為 truthy 時，如果 t.revealed 是 true 就會發送 telephone:reveal／
+ * game:finished 這些「剛公布」才該送一次的事件——投票階段房間早就已經公布過、
+ * 已經是 finished 狀態了，重複送這些事件沒有意義，只需要單純廣播一次最新的
+ * room:state 讓所有人看到投票進度／或者已經返回大廳）。
+ */
+export function handleTelephoneVoteReady(io: Server, room: RoomState, playerId: string): void {
+  const result = voteReadyForNextRound(room, playerId);
+  if (!result) return;
+  io.to(room.joinCode).emit('room:state', toRoomSummary(room));
 }
 
 /** 目前輪到的人被硬移除（斷線緩衝期到期仍未回來）時呼叫：自動代他送出空白內容並往下推進 */

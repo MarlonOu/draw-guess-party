@@ -1,6 +1,10 @@
 import type { Server, Socket } from 'socket.io';
 import { getRoom } from '../roomManager';
-import { handleTelephoneGuessSubmit, handleTelephoneDrawingSubmit } from '../telephoneOrchestrator';
+import {
+  handleTelephoneGuessSubmit,
+  handleTelephoneDrawingSubmit,
+  handleTelephoneVoteReady,
+} from '../telephoneOrchestrator';
 
 /**
  * DRAW_TELEPHONE 模式的猜測／畫作提交事件。驗證（是不是他的回合、房間是不是接龍模式、
@@ -26,5 +30,15 @@ export function registerTelephoneHandlers(io: Server, socket: Socket) {
     if (!room) return;
 
     handleTelephoneDrawingSubmit(io, room, playerId);
+  });
+
+  socket.on('telephone:voteReady', () => {
+    const joinCode = socket.data.joinCode as string | undefined;
+    const playerId = socket.data.playerId as string | undefined;
+    if (!joinCode || !playerId) return;
+    const room = getRoom(joinCode);
+    if (!room) return;
+
+    handleTelephoneVoteReady(io, room, playerId);
   });
 }

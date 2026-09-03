@@ -49,6 +49,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
     telephoneReveal,
     submitTelephoneGuess,
     submitTelephoneDrawing,
+    voteReadyForNextRound,
   } = useRoomSocket();
 
   const [categories, setCategories] = useState<string[]>([]);
@@ -270,7 +271,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
         leaveRoom={leaveRoom}
         startGame={startGame}
         updateSettings={updateSettings}
-        cancelAutoRestart={cancelAutoRestart}
+        voteReadyForNextRound={voteReadyForNextRound}
         submitGuess={submitTelephoneGuess}
         submitDrawing={submitTelephoneDrawing}
       />

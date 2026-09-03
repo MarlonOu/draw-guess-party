@@ -30,8 +30,9 @@ interface TelephoneRoomViewProps {
     roundDurationSec?: number;
     categoryFilter?: string[];
     difficultyFilter?: string[];
+    telephoneFlow?: 'combined' | 'alternating';
   }) => void;
-  cancelAutoRestart: () => void;
+  voteReadyForNextRound: () => void;
   submitGuess: (text: string) => void;
   submitDrawing: () => void;
 }
@@ -51,7 +52,7 @@ export function TelephoneRoomView({
   leaveRoom,
   startGame,
   updateSettings,
-  cancelAutoRestart,
+  voteReadyForNextRound,
   submitGuess,
   submitDrawing,
 }: TelephoneRoomViewProps) {
@@ -307,16 +308,31 @@ export function TelephoneRoomView({
             })}
           </div>
 
-          {isHost && (
-            <button
-              type="button"
-              onClick={cancelAutoRestart}
-              className="dg-btn"
-              style={{ alignSelf: 'center', padding: '8px 16px', fontSize: 13 }}
-            >
-              返回大廳，開始新的一輪接龍
-            </button>
-          )}
+          {(() => {
+            // 原本是只有房主能按一個按鈕直接返回大廳，改成每個人都要各自表態——
+            // 這裡改用投票進度＋每個人自己的「我準備好了」按鈕，不再限定房主才看得到。
+            const readyIds = room.telephone?.readyForNextRoundIds ?? [];
+            const iAmReady = myPlayerId !== null && readyIds.includes(myPlayerId);
+            const readyConnectedCount = readyIds.filter(
+              (id) => room.players.find((p) => p.id === id)?.connected
+            ).length;
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
+                  {readyConnectedCount} / {connectedPlayerCount} 人已準備好下一場
+                </p>
+                <button
+                  type="button"
+                  onClick={voteReadyForNextRound}
+                  disabled={iAmReady}
+                  className={iAmReady ? 'dg-btn' : 'dg-btn dg-btn-primary'}
+                  style={{ padding: '8px 20px', fontSize: 13 }}
+                >
+                  {iAmReady ? '已準備，等其他人…' : '我準備好了，返回大廳'}
+                </button>
+              </div>
+            );
+          })()}
         </div>
       ) : (
         <div className="dg-canvas-row" style={{ marginTop: 6, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'stretch' }}>

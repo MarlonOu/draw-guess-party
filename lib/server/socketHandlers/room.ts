@@ -11,6 +11,7 @@ import {
   countConnectedPlayers,
   updateRoomSettings,
   returnToLobby,
+  checkTelephoneVotesAndMaybeReturn,
   TELEPHONE_MIN_PLAYERS,
 } from '../roomManager';
 import { beginRound, endRoundAndAdvance, clearRoundTimerForRoom, finishMatchAndScheduleRestart } from '../roundOrchestrator';
@@ -205,6 +206,19 @@ function performRemoval(io: Server, joinCode: string, playerId: string): void {
   }
 
   io.to(joinCode).emit('room:state', toRoomSummary(room));
+
+  // 接龍模式的公布階段（作品列表，投票「準備好下一場」的那個畫面）如果有人在
+  // 這時候斷線被移除，剩餘連線中玩家的投票門檻要重新算一次——不然可能發生
+  // 「原本 3 人差 1 票，那個沒投票的人自己先斷線被移除，剩下 2 人早就都投過
+  // 票了，卻永遠等不到會自動觸發返回大廳的下一次投票」這種房間卡死的情況。
+  // 這裡刻意用單獨一次 room:state 廣播（不是跟上面那次合併），讓所有人先看到
+  // 「少一個人」的狀態，如果緊接著真的觸發返回大廳，再收到第二次「已經是
+  // lobby」的狀態，兩個狀態轉換分開看比較清楚，不會混在一起看不出發生了什麼。
+  if (room.status === 'finished' && room.settings.mode === 'DRAW_TELEPHONE') {
+    if (checkTelephoneVotesAndMaybeReturn(room)) {
+      io.to(joinCode).emit('room:state', toRoomSummary(room));
+    }
+  }
 
   if (room.status !== 'playing') return;
 

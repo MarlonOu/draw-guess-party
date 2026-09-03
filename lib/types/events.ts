@@ -42,6 +42,9 @@ export interface ClientToServerEvents {
   /** DRAW_TELEPHONE 模式：輪到自己畫的時候，畫完按下「交給下一位」，沒有額外資料——
    *  這一棒的筆畫資料伺服器早就透過 stroke:start/points/end 即時收著了 */
   'telephone:submitDrawing': () => void;
+  /** DRAW_TELEPHONE 模式：公布階段（作品列表）投「準備好下一場」的票，沒有額外資料——
+   *  伺服器從 socket.data 裡的 playerId 判斷是誰投的票 */
+  'telephone:voteReady': () => void;
 }
 
 /** Server -> Client */

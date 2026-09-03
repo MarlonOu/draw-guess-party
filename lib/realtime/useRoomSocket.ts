@@ -263,6 +263,10 @@ export function useRoomSocket() {
     setTelephoneYourTurn(null);
   }, []);
 
+  const voteReadyForNextRound = useCallback(() => {
+    getSocket().emit('telephone:voteReady');
+  }, []);
+
   return {
     connected,
     room,
@@ -286,5 +290,6 @@ export function useRoomSocket() {
     cancelAutoRestart,
     submitTelephoneGuess,
     submitTelephoneDrawing,
+    voteReadyForNextRound,
   };
 }
