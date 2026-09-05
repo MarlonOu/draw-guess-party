@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSocket } from './socketClient';
-import type { RoomSummary, TelephoneReveal } from '../types/room';
+import type { RoomSummary, TelephoneReveal, FragmentReveal, FragmentSplitOrientation, FragmentHalf } from '../types/room';
 import type { GuessMessage } from '../types/round';
 import type { WordOption } from '../types/events';
 import type { Stroke } from '../types/stroke';
@@ -37,6 +37,41 @@ type TelephoneYourTurn =
   | { subPhase: 'guessing'; previousStrokes: Stroke[] }
   | { subPhase: 'drawing'; promptText: string };
 
+/** FRAGMENT_DRAW 模式：私訊告知「現在輪到自己該做什麼」，型別跟
+ *  lib/types/room.ts 的 FragmentYourTurn 一致，額外帶上 teamId 方便前端
+ *  對照目前 room.fragment.teams 裡對應的組別資訊 */
+type FragmentYourTurn =
+  | { teamId: string; subPhase: 'drawing1'; word: string; splitOrientation: FragmentSplitOrientation }
+  | {
+      teamId: string;
+      subPhase: 'drawing2';
+      word: string;
+      splitOrientation: FragmentSplitOrientation;
+      keptHalf: FragmentHalf;
+      keptStrokes: Stroke[];
+    };
+
+/** FRAGMENT_DRAW 模式：猜題階段廣播的內容，isOwnTeam 決定前端要不要顯示
+ *  猜測輸入框（自己這組的兩位成員收到的也是這個事件，但 isOwnTeam 是 true） */
+interface FragmentGuessPhase {
+  teamId: string;
+  word: string;
+  splitOrientation: FragmentSplitOrientation;
+  keptHalf: FragmentHalf;
+  keptStrokes: Stroke[];
+  completedStrokes: Stroke[];
+  isOwnTeam: boolean;
+}
+
+/** FRAGMENT_DRAW 模式：起手在補全階段旁觀時收到的內容，見 events.ts 的
+ *  fragment:teammateDrawing 說明 */
+interface FragmentTeammateDrawing {
+  teamId: string;
+  splitOrientation: FragmentSplitOrientation;
+  keptHalf: FragmentHalf;
+  keptStrokes: Stroke[];
+}
+
 export function useRoomSocket() {
   // 初始值直接讀取 socket 目前的實際連線狀態，而不是恆為 false：
   // 若這個分頁在本次 session 中先前已經連過線（例如建過一次房間、又建第二次），
@@ -61,6 +96,16 @@ export function useRoomSocket() {
   const [telephoneYourTurn, setTelephoneYourTurn] = useState<TelephoneYourTurn | null>(null);
   /** DRAW_TELEPHONE 模式：接龍公布內容，只有 reveal 階段才非 null */
   const [telephoneReveal, setTelephoneReveal] = useState<TelephoneReveal | null>(null);
+
+  /** FRAGMENT_DRAW 模式：輪到自己時該做什麼；換階段或回到大廳時清空 */
+  const [fragmentYourTurn, setFragmentYourTurn] = useState<FragmentYourTurn | null>(null);
+  /** FRAGMENT_DRAW 模式：猜題階段目前正在公布給大家看的那一組作品內容 */
+  const [fragmentGuessPhase, setFragmentGuessPhase] = useState<FragmentGuessPhase | null>(null);
+  /** FRAGMENT_DRAW 模式：全部組別公布內容，只有 reveal 階段才非 null */
+  const [fragmentReveal, setFragmentReveal] = useState<FragmentReveal | null>(null);
+  /** FRAGMENT_DRAW 模式：起手在補全階段旁觀時的參考內容（切割線、保留下來
+   *  那一半），不是輪到自己畫，純粹顯示用；換階段或回到大廳時清空 */
+  const [fragmentTeammateDrawing, setFragmentTeammateDrawing] = useState<FragmentTeammateDrawing | null>(null);
 
   /**
    * 用來偵測「跟上一次相比發生了什麼變化」的參照值，不是拿來畫面渲染用的狀態
@@ -183,6 +228,26 @@ export function useRoomSocket() {
       // 語意上跟「大家都答對了」的歡慶感一致。
       playAllCorrectSound();
     };
+    const onFragmentYourTurn = (payload: FragmentYourTurn) => {
+      setFragmentYourTurn(payload);
+    };
+    const onFragmentGuessPhase = (payload: FragmentGuessPhase) => {
+      setFragmentGuessPhase(payload);
+      // 進入猜題階段代表這一組（含自己這組，如果剛好輪到）的作畫子階段已經結束，
+      // 之前私訊收到的「輪到自己畫」「旁觀隊友」內容不再有意義，清空避免殘留
+      // 造成畫面誤判。
+      setFragmentYourTurn(null);
+      setFragmentTeammateDrawing(null);
+    };
+    const onFragmentReveal = (payload: FragmentReveal) => {
+      setFragmentReveal(payload);
+      setFragmentGuessPhase(null);
+      // 沿用跟接龍模式一樣的理由：全部組別公布完畢是這個玩法的高潮時刻。
+      playAllCorrectSound();
+    };
+    const onFragmentTeammateDrawing = (payload: FragmentTeammateDrawing) => {
+      setFragmentTeammateDrawing(payload);
+    };
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -196,6 +261,10 @@ export function useRoomSocket() {
     socket.on('room:joined', onRoomJoined);
     socket.on('telephone:yourTurn', onTelephoneYourTurn);
     socket.on('telephone:reveal', onTelephoneReveal);
+    socket.on('fragment:yourTurn', onFragmentYourTurn);
+    socket.on('fragment:guessPhase', onFragmentGuessPhase);
+    socket.on('fragment:reveal', onFragmentReveal);
+    socket.on('fragment:teammateDrawing', onFragmentTeammateDrawing);
 
     return () => {
       socket.off('connect', onConnect);
@@ -210,6 +279,10 @@ export function useRoomSocket() {
       socket.off('room:joined', onRoomJoined);
       socket.off('telephone:yourTurn', onTelephoneYourTurn);
       socket.off('telephone:reveal', onTelephoneReveal);
+      socket.off('fragment:yourTurn', onFragmentYourTurn);
+      socket.off('fragment:guessPhase', onFragmentGuessPhase);
+      socket.off('fragment:reveal', onFragmentReveal);
+      socket.off('fragment:teammateDrawing', onFragmentTeammateDrawing);
     };
   }, []);
 
@@ -223,6 +296,10 @@ export function useRoomSocket() {
     setMessages([]);
     setTelephoneYourTurn(null);
     setTelephoneReveal(null);
+    setFragmentYourTurn(null);
+    setFragmentGuessPhase(null);
+    setFragmentReveal(null);
+    setFragmentTeammateDrawing(null);
   }, []);
 
   const startGame = useCallback(() => {
@@ -267,6 +344,32 @@ export function useRoomSocket() {
     getSocket().emit('telephone:voteReady');
   }, []);
 
+  const setFragmentOrientation = useCallback((orientation: FragmentSplitOrientation) => {
+    getSocket().emit('fragment:setOrientation', { orientation });
+  }, []);
+
+  const submitFragmentDrawing1 = useCallback(() => {
+    getSocket().emit('fragment:submitDrawing1');
+    setFragmentYourTurn(null);
+  }, []);
+
+  const submitFragmentDrawing2 = useCallback(() => {
+    getSocket().emit('fragment:submitDrawing2');
+    setFragmentYourTurn(null);
+  }, []);
+
+  const submitFragmentGuess = useCallback((text: string) => {
+    getSocket().emit('fragment:submitGuess', { text });
+  }, []);
+
+  const voteReadyForNextFragmentRound = useCallback(() => {
+    getSocket().emit('fragment:voteReady');
+  }, []);
+
+  const joinFragmentTeam = useCallback((teamNumber: number) => {
+    getSocket().emit('fragment:joinTeam', { teamNumber });
+  }, []);
+
   return {
     connected,
     room,
@@ -281,6 +384,10 @@ export function useRoomSocket() {
     myPlayerId,
     telephoneYourTurn,
     telephoneReveal,
+    fragmentYourTurn,
+    fragmentGuessPhase,
+    fragmentReveal,
+    fragmentTeammateDrawing,
     joinRoom,
     leaveRoom,
     startGame,
@@ -291,5 +398,11 @@ export function useRoomSocket() {
     submitTelephoneGuess,
     submitTelephoneDrawing,
     voteReadyForNextRound,
+    setFragmentOrientation,
+    submitFragmentDrawing1,
+    submitFragmentDrawing2,
+    submitFragmentGuess,
+    voteReadyForNextFragmentRound,
+    joinFragmentTeam,
   };
 }

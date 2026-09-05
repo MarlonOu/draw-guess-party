@@ -1,4 +1,4 @@
-import type { RoomPlayer, RoomSummary, TelephoneReveal } from './room';
+import type { RoomPlayer, RoomSummary, TelephoneReveal, FragmentReveal, FragmentSplitOrientation, FragmentHalf } from './room';
 import type { Stroke, StrokePoint } from './stroke';
 import type { GuessMessage } from './round';
 
@@ -45,6 +45,23 @@ export interface ClientToServerEvents {
   /** DRAW_TELEPHONE 模式：公布階段（作品列表）投「準備好下一場」的票，沒有額外資料——
    *  伺服器從 socket.data 裡的 playerId 判斷是誰投的票 */
   'telephone:voteReady': () => void;
+
+  /** FRAGMENT_DRAW 模式：起手作畫中，切換畫布切割方向（左右切／上下切）。
+   *  切換會清空目前畫的內容，見 lib/types/room.ts 的 FragmentSplitOrientation 說明 */
+  'fragment:setOrientation': (payload: { orientation: FragmentSplitOrientation }) => void;
+  /** FRAGMENT_DRAW 模式：起手畫完，交出這一組的作品（系統會隨機保留其中一半給補全者） */
+  'fragment:submitDrawing1': () => void;
+  /** FRAGMENT_DRAW 模式：補全畫完，交出這一組的作品 */
+  'fragment:submitDrawing2': () => void;
+  /** FRAGMENT_DRAW 模式：猜題階段，對目前正在公布的那一組作品送出猜測 */
+  'fragment:submitGuess': (payload: { text: string }) => void;
+  /** FRAGMENT_DRAW 模式：公布階段（作品列表）投「準備好下一場」的票，設計理由
+   *  跟 telephone:voteReady 完全一致 */
+  'fragment:voteReady': () => void;
+  /** FRAGMENT_DRAW 模式：lobby 階段點擊「加入」把自己移到指定組別（不是交換，
+   *  是單純移動自己過去；開始遊戲前允許組別人數暫時不對稱）。房間裡任何人都
+   *  可以呼叫，不限房主，見使用者需求「可以自由組隊」 */
+  'fragment:joinTeam': (payload: { teamNumber: number }) => void;
 }
 
 /** Server -> Client */
@@ -109,4 +126,55 @@ export interface ServerToClientEvents {
   ) => void;
   /** 廣播：接龍跑完最後一棒，公布原始題目跟整條鏈的所有作品／猜測，供大家欣賞 */
   'telephone:reveal': (payload: TelephoneReveal) => void;
+
+  /**
+   * FRAGMENT_DRAW 模式：私訊，只送給「現在輪到」的那個人（起手或補全），告知
+   * 他該做什麼。'drawing1'（起手）附上題目跟目前選擇的切割方向（可以中途透過
+   * fragment:setOrientation 切換）；'drawing2'（補全）額外附上起手保留下來
+   * 那一半的內容（keptStrokes）跟是保留了哪一半（keptHalf，補全只能畫在
+   * 「另一半」，伺服器端也會驗證，不是只靠前端限制）。
+   */
+  'fragment:yourTurn': (
+    payload:
+      | { teamId: string; subPhase: 'drawing1'; word: string; splitOrientation: FragmentSplitOrientation }
+      | {
+          teamId: string;
+          subPhase: 'drawing2';
+          word: string;
+          splitOrientation: FragmentSplitOrientation;
+          keptHalf: FragmentHalf;
+          keptStrokes: Stroke[];
+        }
+  ) => void;
+  /**
+   * FRAGMENT_DRAW 模式：猜題階段，廣播給全房間所有人（不只是要猜的外組玩家）——
+   * 自己這組的兩位成員也會收到（isOwnTeam 是 true），純粹通知「輪到你們這組
+   * 被猜了」，前端依 isOwnTeam 決定要不要顯示猜測輸入框（自己組的作品不用猜、
+   * 也不該讓他猜，見伺服器端 submitFragmentGuess 的驗證）。
+   */
+  'fragment:guessPhase': (payload: {
+    teamId: string;
+    word: string;
+    splitOrientation: FragmentSplitOrientation;
+    keptHalf: FragmentHalf;
+    keptStrokes: Stroke[];
+    completedStrokes: Stroke[];
+    isOwnTeam: boolean;
+  }) => void;
+  /** 廣播：所有組別都公布猜完了，公布每一組的完整作品跟外組玩家各自的猜測，供大家欣賞 */
+  'fragment:reveal': (payload: FragmentReveal) => void;
+  /**
+   * FRAGMENT_DRAW 模式：私訊，只送給起手（隊友），告知補全階段開始了、他可以
+   * 即時旁觀補全過程（見模組層級對應檔案裡「此時第一位看的到繪畫過程」的需求）。
+   * 帶上跟 fragment:yourTurn 的 'drawing2' 分支一樣的內容，讓起手的畫面能顯示
+   * 一樣的切割線跟保留下來的那一半內容，只是他自己不能下筆（畫面上用
+   * disabled 呈現，不是靠沒收到這個事件），補全過程的即時筆畫另外透過
+   * 正常的 stroke:start／stroke:points／stroke:end 廣播過來。
+   */
+  'fragment:teammateDrawing': (payload: {
+    teamId: string;
+    splitOrientation: FragmentSplitOrientation;
+    keptHalf: FragmentHalf;
+    keptStrokes: Stroke[];
+  }) => void;
 }

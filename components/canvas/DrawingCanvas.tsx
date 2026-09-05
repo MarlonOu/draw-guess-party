@@ -3,12 +3,43 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useDrawingSync } from '../../lib/realtime/useDrawingSync';
 import type { Stroke, StrokePoint } from '../../lib/types/stroke';
+import { scaleStrokeWidth } from '../../lib/shared/strokeWidthScale';
 
 interface DrawingCanvasProps {
   color: string;
   width: number;
   tool: 'pen' | 'eraser';
   disabled?: boolean;
+  /**
+   * FRAGMENT_DRAW 模式補全階段專用：限制只能在畫布的某一半下筆，另一半（起手
+   * 保留下來、已經有內容的那一半）完全不能畫。不設定則不限制（其他模式、
+   * FRAGMENT_DRAW 起手階段都不設定這個 prop，可以自由畫滿整個畫布）。
+   * 這裡只是前端體驗上的引導，伺服器端也有一樣的驗證（見
+   * lib/engine/fragmentEngine.ts 的 isPointInAllowedHalf），不能只靠前端限制。
+   */
+  allowedRegion?: { orientation: 'vertical' | 'horizontal'; half: 'a' | 'b' };
+  /**
+   * 畫布本身的背景色，預設白色（其他模式都不傳、維持原本白色畫布）。
+   * FRAGMENT_DRAW 模式補全階段需要傳 'transparent'——這個畫布疊在
+   * FragmentCanvas 顯示「起手保留下來那一半內容」的唯讀圖層上面，如果畫布
+   * 本身是不透明白色，會直接整個蓋住底下的參考內容，變成「畫面看起來反灰、
+   * 但參考內容整個消失看不到」。改成透明，讓底下的唯讀內容能透出來，外層
+   * FragmentCanvas 的 wrapper div 另外提供白色背景，視覺上「沒畫的地方是白色」
+   * 這件事本身不會改變，只是白色背景的來源從畫布本身換到外層容器。
+   */
+  background?: string;
+}
+
+/** 判斷一個正規化座標點是不是落在允許畫的那一半（跟伺服器端
+ *  lib/engine/fragmentEngine.ts 的 isPointInAllowedHalf 邏輯完全一致，這裡是
+ *  前端引導用，實際權威判斷在伺服器端） */
+function isPointInAllowedRegion(
+  point: { x: number; y: number },
+  region: { orientation: 'vertical' | 'horizontal'; half: 'a' | 'b' }
+): boolean {
+  const axis = region.orientation === 'vertical' ? 'x' : 'y';
+  const half = point[axis] < 0.5 ? 'a' : 'b';
+  return half === region.half;
 }
 
 export interface DrawingCanvasHandle {
@@ -70,7 +101,10 @@ function drawStrokeSegment(
 ) {
   ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
   ctx.strokeStyle = color;
-  ctx.lineWidth = width;
+  // 見 lib/shared/strokeWidthScale.ts 的說明：width 是「參考畫布寬度下校準出來
+  // 的粗細值」，要依照這個畫布實際的寬度換算成真正該用的 lineWidth，同一條
+  // 筆畫不管在哪種尺寸的畫布上畫，相對粗細比例才會一致。
+  ctx.lineWidth = scaleStrokeWidth(width, cssWidth);
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.beginPath();
@@ -93,11 +127,15 @@ function drawStrokeSegment(
  * 內部解析度，不需要每次畫線都手動乘 dpr。
  */
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
-  function DrawingCanvas({ color, width, tool, disabled = false }, ref) {
+  function DrawingCanvas({ color, width, tool, disabled = false, allowedRegion, background = '#ffffff' }, ref) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const localStrokeIdRef = useRef<string | null>(null);
     const localStartTimeRef = useRef<number>(0);
     const lastLocalPointRef = useRef<StrokePoint | null>(null);
+    /** 上一個點是不是落在允許畫的範圍內（沒有 allowedRegion 限制時恆為 true）。
+     *  跟 lastLocalPointRef 搭配使用：只有「上一個點」跟「這一個點」都在允許
+     *  範圍內，才真的畫出連接兩點的線段——見 handlePointerMove 裡的說明。 */
+    const lastPointWasAllowedRef = useRef(true);
     /** 畫布目前的 CSS 顯示尺寸（不是內部像素解析度），resize 時更新，繪圖座標運算都以此為準 */
     const canvasCssSizeRef = useRef({ width: 0, height: 0 });
 
@@ -249,6 +287,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       if (disabled) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
+
+      const startPoint = toNormalizedPoint(event, canvas, Date.now());
+      if (allowedRegion && !isPointInAllowedRegion(startPoint, allowedRegion)) return;
+
       canvas.setPointerCapture(event.pointerId);
 
       const strokeId = crypto.randomUUID();
@@ -256,6 +298,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       localStartTimeRef.current = Date.now();
       const point = toNormalizedPoint(event, canvas, localStartTimeRef.current);
       lastLocalPointRef.current = point;
+      // 新筆畫的起點已經在上面驗證過落在允許範圍內（第288行的 return），這裡
+      // 明確重置成 true，確保接下來第一次 handlePointerMove 的判斷不會被
+      // 上一筆畫結束時殘留的狀態影響。
+      lastPointWasAllowedRef.current = true;
 
       strokesRef.current.set(strokeId, {
         id: strokeId,
@@ -278,14 +324,28 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       if (!canvas || !ctx || !strokeId || !lastLocalPointRef.current) return;
 
       const point = toNormalizedPoint(event, canvas, localStartTimeRef.current);
-      const { width: cssWidth, height: cssHeight } = canvasCssSizeRef.current;
-      drawStrokeSegment(ctx, cssWidth, cssHeight, lastLocalPointRef.current, point, color, width, tool);
+      const isCurrentAllowed = !allowedRegion || isPointInAllowedRegion(point, allowedRegion);
+      // 補全階段手滑越過切割線：只有「上一個點」跟「這一個點」都落在允許範圍
+      // 內，才真的畫出連接兩點的線段——這裡曾經是一個真實的 bug：只檢查
+      // 「這一個點」在不在允許範圍內，忽略了「上一個點」的狀態。如果上一個點
+      // 落在禁止範圍（因為手滑快速移動過去），這一個點又剛好飄回允許範圍，
+      // 舊邏輯會直接畫一條從「禁止範圍內的上一個點」連到「允許範圍內的這一個
+      // 點」的線段——這條連接線必然會貫穿切割邊界，畫面上就會看到線條明顯
+      // 超出界線。現在只要兩端有任一端落在禁止範圍，這一段就完全跳過（不畫、
+      // 不記錄、不送出），只更新座標／範圍狀態供下一段判斷使用，確保不管遊標
+      // 移動速度多快、怎麼跨越邊界，畫出來的線永遠不會越界。
+      if (isCurrentAllowed && lastPointWasAllowedRef.current) {
+        const { width: cssWidth, height: cssHeight } = canvasCssSizeRef.current;
+        drawStrokeSegment(ctx, cssWidth, cssHeight, lastLocalPointRef.current, point, color, width, tool);
+
+        const stroke = strokesRef.current.get(strokeId);
+        stroke?.points.push(point);
+
+        addPoint(point);
+      }
+
       lastLocalPointRef.current = point;
-
-      const stroke = strokesRef.current.get(strokeId);
-      stroke?.points.push(point);
-
-      addPoint(point);
+      lastPointWasAllowedRef.current = isCurrentAllowed;
     };
 
     const handlePointerUp = () => {
@@ -315,7 +375,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
           top: 0,
           left: 0,
           touchAction: 'none',
-          background: '#ffffff',
+          background,
           cursor: disabled ? 'default' : buildBrushCursor(color, width, tool),
         }}
       />

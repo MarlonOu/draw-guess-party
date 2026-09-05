@@ -50,7 +50,7 @@ export default function OnlineLobbyPage() {
   const [mobileTab, setMobileTab] = useState<'create' | 'join'>('create');
 
   const [createName, setCreateName] = useState('');
-  const [mode, setMode] = useState<'DRAW_GUESS' | 'DRAW_TELEPHONE'>('DRAW_GUESS');
+  const [mode, setMode] = useState<'DRAW_GUESS' | 'DRAW_TELEPHONE' | 'FRAGMENT_DRAW'>('DRAW_GUESS');
   const [roundDurationSec, setRoundDurationSec] = useState(60);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -194,6 +194,9 @@ export default function OnlineLobbyPage() {
             <ChipToggle active={mode === 'DRAW_TELEPHONE'} onClick={() => setMode('DRAW_TELEPHONE')}>
               畫圖接龍
             </ChipToggle>
+            <ChipToggle active={mode === 'FRAGMENT_DRAW'} onClick={() => setMode('FRAGMENT_DRAW')}>
+              拼圖接畫
+            </ChipToggle>
           </div>
 
           {mode === 'DRAW_TELEPHONE' && (
@@ -211,6 +214,25 @@ export default function OnlineLobbyPage() {
               之後每一位都要先猜前一棒畫的是什麼、再畫下自己的猜測，最後一位猜完後
               直接公布原始題目跟整條接龍的所有作品。猜測限時 25 秒、作畫限時 60 秒，
               不受下面的「每輪限時」影響（那個設定只有「你畫我猜」模式在用）。
+            </div>
+          )}
+
+          {mode === 'FRAGMENT_DRAW' && (
+            <div
+              className="dg-card dg-mode-note"
+              style={{
+                padding: '10px 14px',
+                marginBottom: 16,
+                background: 'var(--green-soft)',
+                boxShadow: 'none',
+                fontSize: 13,
+              }}
+            >
+              <strong>玩法：</strong>兩人一組，至少需要 4 人（且為偶數）才能開始。每組拿到
+              各自的題目，起手先自由畫滿整個畫布，交卷後系統隨機保留其中一半給隊友，
+              隊友只能在空白那一半接續作畫、補全題目內容。全部組別都畫完後，每一組的
+              作品輪流公布給其他組的所有人一起猜，最後以組為單位公布完整作品跟大家的
+              猜測。不計分，純粹娛樂。
             </div>
           )}
 

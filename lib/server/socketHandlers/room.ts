@@ -12,6 +12,8 @@ import {
   updateRoomSettings,
   returnToLobby,
   checkTelephoneVotesAndMaybeReturn,
+  checkFragmentVotesAndMaybeReturn,
+  handleFragmentPlayerRemoval,
   TELEPHONE_MIN_PLAYERS,
 } from '../roomManager';
 import { beginRound, endRoundAndAdvance, clearRoundTimerForRoom, finishMatchAndScheduleRestart } from '../roundOrchestrator';
@@ -21,6 +23,14 @@ import {
   clearTelephoneTimerForRoom,
   sendYourTurn,
 } from '../telephoneOrchestrator';
+import {
+  beginFragmentRound,
+  forceAdvanceFragmentOnRemoval,
+  clearFragmentTimersForRoom,
+  sendFragmentDrawing1Turn,
+  sendFragmentDrawing2Turn,
+} from '../fragmentOrchestrator';
+import { FRAGMENT_MIN_PLAYERS } from '../../shared/fragmentConstants';
 
 /**
  * 斷線緩衝時間：手機切到別的 App（例如分享房間連結）、或短暫網路不穩時，瀏覽器分頁
@@ -85,6 +95,19 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
     ) {
       sendYourTurn(io, room);
     }
+
+    // FRAGMENT_DRAW 模式：理由跟上面的 DRAW_TELEPHONE 完全一致——題目、切割方向、
+    // 保留下來的畫布內容都只透過私訊傳送，不會放進公開的 room:state。這個模式
+    // 每一組各自獨立推進，要先找出這個人所屬的組別，再看現在是不是輪到他
+    // （起手／drawing1，或補全／drawing2），是的話補送對應的私訊。
+    if (existingPlayerId && room.settings.mode === 'FRAGMENT_DRAW' && room.fragment) {
+      const team = room.fragment.teams.find((t) => t.playerIds.includes(player.id));
+      if (team?.subPhase === 'drawing1' && team.playerIds[0] === player.id) {
+        sendFragmentDrawing1Turn(io, room, team.id);
+      } else if (team?.subPhase === 'drawing2' && team.playerIds[1] === player.id) {
+        sendFragmentDrawing2Turn(io, room, team.id);
+      }
+    }
   });
 
   socket.on('room:leave', () => {
@@ -114,6 +137,19 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
         return;
       }
       void beginTelephoneRound(io, room);
+      return;
+    }
+
+    if (room.settings.mode === 'FRAGMENT_DRAW') {
+      // 兩人一組，至少要有兩組——人數要 >= 4 且是偶數才能整除成組
+      const connectedCount = countConnectedPlayers(room);
+      if (connectedCount < FRAGMENT_MIN_PLAYERS || connectedCount % 2 !== 0) {
+        socket.emit('room:error', {
+          message: `需要至少 ${FRAGMENT_MIN_PLAYERS} 人、且為偶數（兩人一組）才能開始`,
+        });
+        return;
+      }
+      void beginFragmentRound(io, room);
       return;
     }
 
@@ -202,20 +238,23 @@ function performRemoval(io: Server, joinCode: string, playerId: string): void {
   if (roomDeleted) {
     clearRoundTimerForRoom(joinCode);
     clearTelephoneTimerForRoom(joinCode);
+    clearFragmentTimersForRoom(joinCode);
     return;
   }
 
   io.to(joinCode).emit('room:state', toRoomSummary(room));
 
-  // 接龍模式的公布階段（作品列表，投票「準備好下一場」的那個畫面）如果有人在
-  // 這時候斷線被移除，剩餘連線中玩家的投票門檻要重新算一次——不然可能發生
-  // 「原本 3 人差 1 票，那個沒投票的人自己先斷線被移除，剩下 2 人早就都投過
-  // 票了，卻永遠等不到會自動觸發返回大廳的下一次投票」這種房間卡死的情況。
-  // 這裡刻意用單獨一次 room:state 廣播（不是跟上面那次合併），讓所有人先看到
-  // 「少一個人」的狀態，如果緊接著真的觸發返回大廳，再收到第二次「已經是
+  // 接龍模式、FRAGMENT_DRAW 模式的公布階段（作品列表，投票「準備好下一場」的
+  // 那個畫面）如果有人在這時候斷線被移除，剩餘連線中玩家的投票門檻要重新算
+  // 一次——不然可能發生「原本差 1 票，那個沒投票的人自己先斷線被移除，剩下的人
+  // 早就都投過票了，卻永遠等不到會自動觸發返回大廳的下一次投票」這種房間卡死
+  // 的情況。這裡刻意用單獨一次 room:state 廣播（不是跟上面那次合併），讓所有人
+  // 先看到「少一個人」的狀態，如果緊接著真的觸發返回大廳，再收到第二次「已經是
   // lobby」的狀態，兩個狀態轉換分開看比較清楚，不會混在一起看不出發生了什麼。
-  if (room.status === 'finished' && room.settings.mode === 'DRAW_TELEPHONE') {
-    if (checkTelephoneVotesAndMaybeReturn(room)) {
+  if (room.status === 'finished') {
+    if (room.settings.mode === 'DRAW_TELEPHONE' && checkTelephoneVotesAndMaybeReturn(room)) {
+      io.to(joinCode).emit('room:state', toRoomSummary(room));
+    } else if (room.settings.mode === 'FRAGMENT_DRAW' && checkFragmentVotesAndMaybeReturn(room)) {
       io.to(joinCode).emit('room:state', toRoomSummary(room));
     }
   }
@@ -226,6 +265,18 @@ function performRemoval(io: Server, joinCode: string, playerId: string): void {
     if (wasActiveTelephonePlayer) {
       // 保留至先前推進到下一位的邏輯（或提早進入公布階段，如果後面已經沒有人了）
       forceAdvanceTelephoneOnRemoval(io, room);
+    }
+    return;
+  }
+
+  if (room.settings.mode === 'FRAGMENT_DRAW') {
+    // 這裡一定要在 removePlayer 已經把這個人從 room.players 移除之後才呼叫
+    // ——handleFragmentPlayerRemoval 內部的連鎖檢查（見 roomManager.ts 的說明）
+    // 需要看到「這個人真的已經不在房間裡了」才能正確判斷該不該連鎖完成整組，
+    // 這個函式簽名上面的呼叫順序（先 removePlayer 再呼叫這裡）已經符合這個前提。
+    const affected = handleFragmentPlayerRemoval(room, playerId);
+    if (affected) {
+      forceAdvanceFragmentOnRemoval(io, room, affected.teamId);
     }
     return;
   }

@@ -29,6 +29,119 @@ export interface RoomSettings {
 }
 
 /**
+ * FRAGMENT_DRAW 模式：畫布怎麼切、保留哪一半。
+ *  - 'vertical'（左右切）：畫布用一條垂直線分成左右兩半，'a' = 左半、'b' = 右半
+ *  - 'horizontal'（上下切）：畫布用一條水平線分成上下兩半，'a' = 上半、'b' = 下半
+ * 起手（組內第一位）畫畫時可以隨時切換這個方向（見 FragmentYourTurn 的
+ * splitOrientation），每次切換會清空目前畫的內容——切完方向、原本畫的東西
+ * 可能跨到另一半去了，留著沒有意義，乾脆清空重畫比較不會混亂。
+ */
+export type FragmentSplitOrientation = 'vertical' | 'horizontal';
+export type FragmentHalf = 'a' | 'b';
+
+/**
+ * FRAGMENT_DRAW 模式：跨組猜題階段，某位玩家對某一組作品給出的猜測。
+ * 不會有「猜對/猜錯」的判定——這個模式不計分，純粹是公布階段給大家看看
+ * 別組都猜了些什麼，跟接龍模式一樣單純娛樂用途。
+ */
+export interface FragmentGuess {
+  guesserId: string;
+  guesserDisplayName: string;
+  text: string;
+}
+
+/** FRAGMENT_DRAW 模式：單一組公布時的完整內容 */
+export interface FragmentTeamReveal {
+  teamId: string;
+  word: string;
+  /** [起手, 補全] 兩位組員的 id 與顯示名稱，順序固定 */
+  memberIds: [string, string];
+  memberNames: [string, string];
+  splitOrientation: FragmentSplitOrientation;
+  /** 起手畫完後，系統隨機保留下來的是哪一半 */
+  keptHalf: FragmentHalf;
+  /** 保留下來那一半的筆畫內容（起手畫的，篩選過的） */
+  keptStrokes: import('./stroke').Stroke[];
+  /** 補全者在空白那一半畫的內容 */
+  completedStrokes: import('./stroke').Stroke[];
+  /** 猜這組作品的所有外組玩家的猜測，依送出先後排序 */
+  guesses: FragmentGuess[];
+}
+
+export interface FragmentReveal {
+  teams: FragmentTeamReveal[];
+}
+
+/**
+ * FRAGMENT_DRAW 模式：目前輪到自己時，私訊告知該做什麼。跟 DRAW_TELEPHONE
+ * 的 TelephoneYourTurn 是同樣的設計理念——內容只私訊給當事人，不放進公開的
+ * FragmentSummary，避免其他人（尤其是要猜這組作品的外組玩家）提前偷看到答案。
+ */
+export type FragmentYourTurn =
+  | {
+      subPhase: 'drawing1';
+      word: string;
+      /** 目前選擇的切割方向，起手可以隨時呼叫 fragment:setOrientation 切換
+       *  （切換會清空目前畫的內容，見 FragmentSplitOrientation 的說明） */
+      splitOrientation: FragmentSplitOrientation;
+    }
+  | {
+      subPhase: 'drawing2';
+      word: string;
+      splitOrientation: FragmentSplitOrientation;
+      /** 哪一半已經有起手保留下來的內容——補全者只能在「另一半」畫 */
+      keptHalf: FragmentHalf;
+      /** 起手保留下來那一半的筆畫內容，補全者要看得到才能接續著畫 */
+      keptStrokes: import('./stroke').Stroke[];
+    };
+
+/**
+ * FRAGMENT_DRAW 模式的公開狀態摘要。多組是「平行」推進的（不是像接龍那樣共用
+ * 一個「輪到第幾位」的單一序列）——每一組各自獨立畫完「起手→補全」兩階段，
+ * 不用等其他組，所以這裡沒有像 TelephoneSummary.activePlayerId 那樣單一一個
+ * 「目前輪到誰」的欄位；要知道「這一組現在誰在畫」，要看 teams 裡各組各自的
+ * activePlayerId／subPhase。
+ */
+export interface FragmentTeamSummary {
+  id: string;
+  /** [起手, 補全] 兩位組員的 id，組隊當下（比賽開始時）就固定，不會中途更動 */
+  playerIds: [string, string];
+  /** 這一組目前的子階段；drawing1/drawing2 才代表還在畫，'done' 代表這組已經全部畫完 */
+  subPhase: 'drawing1' | 'drawing2' | 'done';
+  /** 目前這個子階段開始的時間戳（epoch ms），跟 TelephoneSummary.subPhaseStartedAt
+   *  同樣的設計理由：讓旁觀者（含隊友）也能算出同步倒數 */
+  subPhaseStartedAt: number | null;
+  /** 這一組目前輪到誰在畫；subPhase 是 'done' 時固定 null */
+  activePlayerId: string | null;
+}
+
+/**
+ * FRAGMENT_DRAW 模式的公開狀態摘要：所有組別的畫畫進度（不含畫布內容本身，
+ * 那是私訊）＋跨組猜題階段的進度＋公布結果＋下一場投票名單。
+ */
+export interface FragmentSummary {
+  teams: FragmentTeamSummary[];
+  /**
+   * 猜題階段：目前正在公布、讓外組玩家猜的是哪一組（依 teams 陣列順序，
+   * 一組一組來，見使用者需求「輪流給其他組的所有人分別猜測」）。
+   * null 代表猜題階段還沒開始（所有組都還在畫，或已經全部結束、進入 revealed）。
+   */
+  activeGuessTeamId: string | null;
+  /** 猜題階段這一組作品公布的時間戳，理由同上，讓大家算出同步倒數 */
+  guessPhaseStartedAt: number | null;
+  /** 猜題階段：這一組作品目前已經送出猜測的（外組）玩家 id */
+  guessedPlayerIds: string[];
+  /** 猜題階段還剩幾組作品沒公布過（含目前正在猜的這組），全部猜完才會進入 revealed */
+  remainingGuessTeams: number;
+  /** 只有進入公布階段才非 null */
+  reveal: FragmentReveal | null;
+  /** 公布階段的「準備好下一場」投票名單，跟 TelephoneSummary.readyForNextRoundIds
+   *  是同一套機制（見那邊的說明），這個模式沿用一樣的設計 */
+  readyForNextRoundIds: string[];
+}
+
+
+/**
  * DRAW_TELEPHONE 模式：接龍裡已經完成的一棒。
  *
  * 'combined' 流程（見 RoomSettings.telephoneFlow）：strokes 一定有內容（唯一例外是
@@ -128,4 +241,13 @@ export interface RoomSummary {
   correctGuesserIds: string[];
   /** 只有 mode === 'DRAW_TELEPHONE' 時才有意義，其餘模式固定為 null */
   telephone: TelephoneSummary | null;
+  /** 只有 mode === 'FRAGMENT_DRAW' 時才有意義，其餘模式固定為 null */
+  fragment: FragmentSummary | null;
+  /**
+   * FRAGMENT_DRAW 模式專用：lobby 階段每個玩家目前選擇加入的組別編號，
+   * key 是玩家 id、value 是組別編號（從 0 起）。其餘模式或非 lobby 階段
+   * 固定是空物件。詳見 lib/server/roomManager.ts 的
+   * RoomState.fragmentTeamAssignment 說明。
+   */
+  fragmentTeamAssignment: Record<string, number>;
 }

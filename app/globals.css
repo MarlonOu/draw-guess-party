@@ -282,6 +282,20 @@ a:focus-visible {
   height: auto;
 }
 
+/**
+ * FRAGMENT_DRAW 模式專用的畫布外框寬度策略：這個模式的工具列直接放在畫布
+ * 正上方（不是像其他模式那樣並排在同一列），不需要 .dg-canvas-frame 那套
+ * 「跟工具列共用一列、用 flex-grow 吃掉剩餘空間」的邏輯，改成單純置中、
+ * 給一個比其他模式更寬的上限——使用者需求明確要求這個模式的畫布「不同以往
+ * 的大一點」，900px（其他模式的上限）對兩人協作、要看清楚保留下來那一半
+ * 內容細節的需求來說偏窄，這裡放寬到 1100px。
+ */
+.dg-fragment-canvas-frame {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
 @media (max-width: 640px) {
   .dg-page {
     padding: 14px !important;

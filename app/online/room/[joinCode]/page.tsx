@@ -14,6 +14,7 @@ import { StatusIcon } from '../../../../components/room/StatusIcon';
 import { RoomSettingsPanel } from '../../../../components/room/RoomSettingsPanel';
 import { SoundToggleButton } from '../../../../components/room/SoundToggleButton';
 import { TelephoneRoomView } from '../../../../components/room/TelephoneRoomView';
+import { FragmentRoomView } from '../../../../components/room/FragmentRoomView';
 
 interface StoredIdentity {
   displayName: string;
@@ -50,6 +51,16 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
     submitTelephoneGuess,
     submitTelephoneDrawing,
     voteReadyForNextRound,
+    fragmentYourTurn,
+    fragmentTeammateDrawing,
+    fragmentGuessPhase,
+    fragmentReveal,
+    setFragmentOrientation,
+    submitFragmentDrawing1,
+    submitFragmentDrawing2,
+    submitFragmentGuess,
+    voteReadyForNextFragmentRound,
+    joinFragmentTeam,
   } = useRoomSocket();
 
   const [categories, setCategories] = useState<string[]>([]);
@@ -274,6 +285,28 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
         voteReadyForNextRound={voteReadyForNextRound}
         submitGuess={submitTelephoneGuess}
         submitDrawing={submitTelephoneDrawing}
+      />
+    );
+  }
+
+  if (room.settings.mode === 'FRAGMENT_DRAW') {
+    return (
+      <FragmentRoomView
+        room={room}
+        myPlayerId={myPlayerId}
+        yourTurn={fragmentYourTurn}
+        teammateDrawing={fragmentTeammateDrawing}
+        guessPhase={fragmentGuessPhase}
+        reveal={fragmentReveal}
+        leaveRoom={leaveRoom}
+        startGame={startGame}
+        updateSettings={updateSettings}
+        voteReadyForNextRound={voteReadyForNextFragmentRound}
+        setOrientation={setFragmentOrientation}
+        submitDrawing1={submitFragmentDrawing1}
+        submitDrawing2={submitFragmentDrawing2}
+        submitGuess={submitFragmentGuess}
+        joinTeam={joinFragmentTeam}
       />
     );
   }

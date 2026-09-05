@@ -6,6 +6,7 @@ import { registerStrokeHandlers } from './lib/server/socketHandlers/stroke';
 import { registerChatHandlers } from './lib/server/socketHandlers/chat';
 import { registerRoundHandlers } from './lib/server/socketHandlers/round';
 import { registerTelephoneHandlers } from './lib/server/socketHandlers/telephone';
+import { registerFragmentHandlers } from './lib/server/socketHandlers/fragment';
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = Number(process.env.PORT ?? 3000);
@@ -23,6 +24,7 @@ app.prepare().then(() => {
     registerChatHandlers(io, socket);
     registerRoundHandlers(io, socket);
     registerTelephoneHandlers(io, socket);
+    registerFragmentHandlers(io, socket);
   });
 
   httpServer.listen(port, () => {

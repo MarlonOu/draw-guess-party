@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef } from 'react';
 import type { Stroke } from '../../lib/types/stroke';
+import { scaleStrokeWidth } from '../../lib/shared/strokeWidthScale';
 
 interface StrokeReplayProps {
   strokes: Stroke[];
@@ -64,7 +65,12 @@ export function StrokeReplay({ strokes, emptyLabel }: StrokeReplayProps) {
       for (const stroke of strokes) {
         ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
         ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.width;
+        // 見 lib/shared/strokeWidthScale.ts 的說明：stroke.width 是「參考畫布
+        // 寬度下校準出來的粗細值」，這裡回放用的畫布（作品列表／公布畫廊的
+        // 預覽框，通常比實際作畫時的畫布小很多）要依照自己實際的寬度換算
+        // lineWidth，不然同一條筆畫在小預覽框裡看起來會過粗、吃掉細節，
+        // 這正是使用者回報「解析度／精細度跟實際作畫有落差」的根因。
+        ctx.lineWidth = scaleStrokeWidth(stroke.width, rect.width);
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         for (let i = 1; i < stroke.points.length; i++) {

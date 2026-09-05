@@ -77,6 +77,14 @@ interface ToolbarProps {
   onUndo: () => void;
   onClear: () => void;
   disabled?: boolean;
+  /**
+   * 強制指定版面，不用內部的螢幕寬度偵測決定。FRAGMENT_DRAW 模式的工具列是
+   * 放在寬版畫布正上方（不是像其他模式那樣窄版直向、並排在畫布旁邊），不管
+   * 螢幕實際寬度多少，橫向排列（跟手機版共用同一套版面）才是這個位置該有的
+   * 樣子——桌機版原本的窄直向設計是為了「站在畫布側邊、佔用寬度要小」，這裡
+   * 完全不適用。不傳的話維持原本「依螢幕寬度自動判斷」的行為，其他模式不受影響。
+   */
+  forceLayout?: 'mobile' | 'desktop';
 }
 
 function ColorSwatch({
@@ -175,16 +183,20 @@ export function Toolbar({
   onUndo,
   onClear,
   disabled = false,
+  forceLayout,
 }: ToolbarProps) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [detectedMobile, setDetectedMobile] = useState(false);
 
   useEffect(() => {
+    if (forceLayout) return; // 有強制指定版面時，不需要監聽螢幕寬度變化
     const mq = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
-    const update = () => setIsMobile(mq.matches);
+    const update = () => setDetectedMobile(mq.matches);
     update();
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
-  }, []);
+  }, [forceLayout]);
+
+  const isMobile = forceLayout ? forceLayout === 'mobile' : detectedMobile;
 
   if (isMobile) {
     return (
@@ -193,7 +205,11 @@ export function Toolbar({
         style={{
           padding: 10,
           width: '100%',
-          maxWidth: 480,
+          // maxWidth:480 是配合真實手機螢幕寬度設計的，forceLayout 情境（例如
+          // FRAGMENT_DRAW 模式，畫布本身就有 1100px 寬）不該被這個手機專用的
+          // 上限卡住，不然顏色會被硬擠成好幾排、下面浪費一大塊空白，工具列看
+          // 起來跟又寬又大的畫布完全不成比例。
+          maxWidth: forceLayout ? 'none' : 480,
           display: 'flex',
           flexDirection: 'column',
           gap: 8,
