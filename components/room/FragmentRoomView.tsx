@@ -10,6 +10,7 @@ import { Toolbar } from '../canvas/Toolbar';
 import { PlayerList } from './PlayerList';
 import { BackButton } from '../nav/BackButton';
 import { CopyButton } from './CopyButton';
+import { QrCodeButton } from './QrCodeButton';
 import { StatusOverlay } from './StatusOverlay';
 import { RoomSettingsPanel } from './RoomSettingsPanel';
 import { SoundToggleButton } from './SoundToggleButton';
@@ -199,7 +200,31 @@ export function FragmentRoomView({
   };
 
   return (
-    <main className="dg-page" style={{ maxWidth: 1400, margin: '0 auto', padding: 24, ...(isRevealing ? { width: '100%' } : {}) }}>
+    <main
+      className="dg-page dg-fragment-page"
+      style={{
+        maxWidth: 1400,
+        margin: '0 auto',
+        padding: 24,
+        // <body> 是 display:flex，讓 <main> 變成 flex item；<main> 同時有
+        // margin:'0 auto' 用於超寬螢幕置中——CSS flexbox 規格裡，flex item
+        // 在橫軸方向上只要有 margin:auto，align-items:stretch 對這個 item
+        // 就完全不會生效，item 會退回「內容多寬就多寬」的 shrink-to-fit
+        // 模式決定自己的寬度，不會真的撐滿可用空間（這個問題先前在接龍模式
+        // 的公布結果畫廊發現過，見那邊 isRevealing 分支的處理）。
+        //
+        // width:'100%' 這個修正只在手機斷點（見 globals.css 的
+        // .dg-fragment-page，套用在 @media (max-width: 640px) 裡）才生效，
+        // 不是這裡用 inline style 不分螢幕寬度一律套用——之前一度改成不分
+        // 螢幕寬度都給 width:'100%'，桌機版意外看起來「跑版」（後來查證那其實
+        // 是另一個獨立問題：lobby 卡片沒有水平置中，不是這個修正本身造成的，
+        // 見下面 lobby 分支 margin:'6px auto 0' 的說明），但既然這個
+        // shrink-to-fit 問題只有在手機窄螢幕上才會造成「超出頁面」這種明顯
+        // 外觀症狀（桌機寬螢幕下 shrink-to-fit 算出來的寬度通常還是夠放得下
+        // 內容），縮小範圍只在手機斷點套用，桌機版的版面計算方式完全不受這個
+        // 修正影響，降低不必要的變動範圍。
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <BackButton href="/online" label="線上模式" onBeforeLeave={leaveRoom} />
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -221,7 +246,18 @@ export function FragmentRoomView({
       {isRevealing ? (
         <FragmentRevealSection reveal={reveal} room={room} myPlayerId={myPlayerId} voteReadyForNextRound={voteReadyForNextRound} />
       ) : room.status === 'lobby' ? (
-        <div className="dg-canvas-frame" style={{ marginTop: 6 }}>
+        // .dg-canvas-frame 這個 class 原本是設計給「跟工具列並排在同一個
+        // flex row（.dg-canvas-row）裡」的情境用的，那個情境下容器本身的
+        // justifyContent 或 flex 排列邏輯會讓子項目自然置中，不需要額外處理。
+        // 這裡（lobby 狀態）是單獨使用，沒有跟任何東西並排——單獨使用時
+        // .dg-canvas-frame 就只是一個有 max-width 的普通區塊元素，區塊元素
+        // 沒有指定 margin 時預設靠左對齊，不會自動置中。這個問題原本被
+        // <main> 本身的 shrink-to-fit bug 意外遮蓋住（<main> 那時候本來就
+        // 收縮到接近內容寬度，沒有「多出來的空間」讓置中與否產生視覺差異），
+        // 修正 <main> 讓它確實撐滿寬度之後，這個一直都存在、只是沒被看見的
+        // 置中缺失就顯現出來了——明確加上 margin:'0 auto' 讓它在變寬的
+        // <main> 裡確實置中，不會整個貼齊左邊、右側留下一大塊不對稱的空白。
+        <div className="dg-canvas-frame" style={{ margin: '6px auto 0' }}>
           <StatusOverlay standalone icon="clock" iconColor="var(--blue)" title="遊戲尚未開始">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -245,6 +281,7 @@ export function FragmentRoomView({
                     {pageUrl}
                   </span>
                   <CopyButton value={pageUrl} label="複製邀請連結" />
+                  <QrCodeButton value={pageUrl} label="顯示邀請連結的 QR code" />
                 </div>
               )}
               <p style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'center', maxWidth: 320 }}>
@@ -544,7 +581,7 @@ function FragmentDrawingSection({
         : '等待遊戲開始';
 
   return (
-    <div className="dg-canvas-frame" style={{ marginTop: 6 }}>
+    <div className="dg-canvas-frame" style={{ margin: '6px auto 0' }}>
       <StatusOverlay standalone icon="clock" iconColor="var(--blue)" title={waitingText} />
     </div>
   );

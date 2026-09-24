@@ -301,6 +301,19 @@ a:focus-visible {
     padding: 14px !important;
   }
 
+  /* FRAGMENT_DRAW 模式專用：<body> 是 display:flex，讓 <main> 變成 flex
+     item；<main> 同時有 margin:'0 auto' 用於超寬螢幕置中——CSS flexbox
+     規格裡，flex item 在橫軸方向上只要有 margin:auto，align-items:stretch
+     對這個 item 就完全不會生效，item 會退回「內容多寬就多寬」的
+     shrink-to-fit 模式決定自己的寬度，不會真的撐滿可用空間。這個問題只有
+     在手機窄螢幕上會造成實際外觀影響（內容超出可視範圍，見使用者截圖
+     回報）——桌機寬螢幕下 shrink-to-fit 算出來的寬度通常還是夠放得下
+     內容，不會有「超出頁面」這種明顯症狀，只在這裡（手機斷點）補上
+     width:100%，不影響桌機版的版面計算方式。 */
+  .dg-fragment-page {
+    width: 100%;
+  }
+
   /* 工具列＋畫布那一列：手機螢幕寬度不夠兩者並排，會被 flexWrap 拆成兩行，
      置中對齊比預設的靠左對齊更好看——不然工具列（固定 100px 寬）會孤零零貼在
      最左邊，右側留一大塊不對稱的空白。 */

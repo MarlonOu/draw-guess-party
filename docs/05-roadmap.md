@@ -768,5 +768,49 @@
 - `tsc`／`eslint`／`next build` 全數通過
 - 端對端測試：完整遊戲流程回歸（含伺服器端範圍驗證仍正確攔截越界筆畫）、DRAW_GUESS／DRAW_TELEPHONE 完整回歸測試確認不受影響
 - 老實說：這兩項都是純粹的客戶端繪圖/渲染邏輯修正，這個環境沒有瀏覽器可以實際操作滑鼠快速移動或截圖比對線條粗細，端對端測試只能驗證「伺服器端邏輯有沒有被改壞」，沒辦法直接驗證「畫面上線條真的不會越界了」「小預覽框裡線條真的變細緻了」——麻煩實際玩起來後再回饋
+
+## FRAGMENT_DRAW 手機版超出頁面寬度
+
+- 使用者截圖回報 FRAGMENT_DRAW 模式在手機版會超出頁面寬度（452px 視窗下，devtools 量到 `main.dg-page` 實際是 658px，明顯比視窗更寬），畫筆工具列的顏色色票沒有換行，一整排延伸超出畫面邊界
+- **根因**：這正是先前在接龍模式公布結果畫廊發現過的同一個 bug——`<body>` 是 `display:flex`，讓 `<main>` 變成 flex item；`<main>` 同時有 `margin:'0 auto'` 用於超寬螢幕置中，CSS flexbox 規格裡，flex item 在橫軸方向上只要有 `margin:auto`，`align-items:stretch` 對這個 item 就完全不會生效，item 會退回「內容多寬就多寬」的 shrink-to-fit 模式決定自己的寬度。上一輪修正這個問題時，範圍刻意收得很窄，只在 `isRevealing`（公布結果）那個狀態才給 `<main>` 明確的 `width:'100%'`，其餘狀態（lobby、作畫、猜題）完全沒有涵蓋到——但 FRAGMENT_DRAW 模式的畫布本來就明確比其他模式寬、工具列直接放在畫布正上方，需要可靠滿版寬度的情境不是只有公布階段才會發生，作畫階段反而是最需要這個修正的地方
+- **修法**：把 `FragmentRoomView.tsx` 的 `<main>` 改成整個元件一律給 `width:'100%'`，不再只挑 `isRevealing` 才套用。刻意不改全站共用的 `.dg-page` class（那樣範圍過大，會影響所有模式的所有頁面），只在這一個 view 元件明確給這個修正，維持跟先前使用者要求「縮小修正範圍」一致的做法
+- `<main>` 可靠撐滿寬度之後，底下整條鏈（`.dg-fragment-canvas-frame` 的 `width:100%` → 工具列的 `width:100%` → 顏色色票的 `flexWrap:'wrap'`）才會正確依照實際手機視窗寬度換行，不會被上層一個尺寸不明確的祖先層層拖累
+- 已通過：`tsc`／`eslint`／`next build` 全數通過；直接檢查編譯後的最終產物確認 `width:"100%"` 已經是無條件套用（不再是 `isRevealing` 的條件式展開）；端對端功能回歸測試確認 FRAGMENT_DRAW 完整流程（含投票返回大廳）沒有受影響，額外確認 DRAW_GUESS／DRAW_TELEPHONE 完全不受影響
+- 老實說：這是純粹的排版修正，這個環境沒有瀏覽器可以在 452px 視窗下截圖驗證顏色色票真的正確換行了，麻煩實際用手機測試後再回饋
+
+## 電腦版排版問題調查（未找到明確 bug）＋新功能：QR Code 分享機制
+
+### 電腦版跑版調查
+- 使用者截圖回報手機版修好之後，電腦版反而跑版。逐項檢查後沒有在程式碼層級找到明確的 bug：
+  - 用截圖比例換算，lobby 卡片實際寬度約落在 897px，跟 `.dg-canvas-frame` 的 `max-width:900px` 規則吻合，寬度上限規則本身沒有被破壞
+  - 「開始遊戲」按鈕邏輯檢查：畫面顯示的是按鈕（不是「人數不足」的文字提示），代表條件判斷正確成立；按鈕看起來偏灰/淡粉的顏色，比對 `.dg-btn-primary` 的 CSS 規則（`background: var(--accent)`，也就是橘色 `#ff6b4a`）不吻合，但這張截圖是在 devtools 元素選取模式下拍的，整頁被半透明色塊疊加，沒辦法從這張圖判斷按鈕的「真實」顏色對不對
+  - 推測比較可能的情況：上一輪修正讓 `<main>` 確實撐滿到 1400px 寬，lobby 卡片維持原本 900px 上限不變，但因為外層變寬了，卡片周圍留白會比之前（因為舊 bug 意外收縮）更明顯——這是修正後「正確」但「視覺上跟以前不一樣」的行為變化，不是新的排版錯誤
+- 已請使用者提供更具體的異常位置以便進一步排查，這次沒有做任何臆測性的修改（避免在還沒確認真正問題的情況下改壞現在是對的東西）
+
+### 新功能：QR Code 分享機制
+- 比照另一個猜歌專案已有的分享機制，新增 `qrcode` 套件（純前端即時產生 QR code 圖片，不需要後端產圖服務），新建 `components/room/QrCodeButton.tsx`：
+  - 點擊後在按鈕下方彈出一個小面板，即時把邀請連結轉成 QR code（data URL，直接塞進 `<img>`，不需要額外的 canvas 操作）
+  - 點擊面板以外區域自動收合，沒有引入額外的 modal/popover library——這個互動夠單純，不值得為此多一個依賴
+- 接進三種模式的 lobby（DRAW_GUESS、DRAW_TELEPHONE、FRAGMENT_DRAW），都在原本「複製邀請連結」按鈕旁邊加上「QR Code」按鈕
+- 安裝套件時 `npm audit` 順便回報了一個既有的 Next.js 安全漏洞（跟這次安裝的 `qrcode` 套件無關，是框架本身 16.3.1~16.3.2 版本的已知問題，跟 Windows 主機／AVIF 圖片優化 API 有關）：這個專案部署在 Linux（Vultr VPS）、也沒有用到圖片優化 API，風險相對可控，這次沒有主動升級 Next.js 版本（跟這次任務無關的更動，貿然升級核心框架版本有引入其他相容性問題的風險），在這裡誠實告知讓使用者自行決定要不要另外處理
+- 已通過：`tsc`／`eslint`／`next build` 全數通過；直接檢查編譯後的最終產物確認 `qrcode` 套件確實打包進去；額外用獨立腳本驗證 `qrcode` 套件本身能正確產生 QR code 的 data URL；端對端功能回歸測試確認三種模式完整遊戲流程都沒有受影響
+- 老實說：QR code 面板的實際顯示效果、掃描後能不能正確導向房間，這個環境沒有瀏覽器或手機相機可以實際測試，麻煩實際掃碼驗證後再回饋
+
+## FRAGMENT_DRAW 電腦版真正的問題：lobby 卡片沒有水平置中
+
+- 使用者提供截圖確認：卡片整個貼齊左邊，右側留了一大塊不對稱的空白，跟調整手機版之前「所有元素都是置中」的樣子不同——這次終於用具體的視覺症狀（不是只有數字量測）確認了真正的問題所在
+- **真正的根因**：`.dg-canvas-frame` 這個共用 class 原本是設計給「跟工具列並排在同一個 flex row（`.dg-canvas-row`）裡」的情境用的，那個情境下容器本身的排列邏輯會讓子項目自然佔滿／置中，不需要額外處理。FRAGMENT_DRAW 模式的 lobby 狀態、以及「等待隊友」狀態，是單獨使用這個 class（沒有跟任何東西並排）——單獨使用時 `.dg-canvas-frame` 就只是一個有 `max-width` 的普通區塊元素，區塊元素沒有指定 `margin` 時預設靠左對齊，不會自動置中
+- 這個問題其實原本就存在，只是被 `<main>` 本身的 shrink-to-fit bug 意外遮蓋住——`<main>` 那時候收縮到接近內容寬度，沒有「多出來的空間」讓置中與否產生視覺差異。上一輪修正 `<main>` 讓它確實撐滿寬度之後，這個一直都存在、只是沒被看見的置中缺失才顯現出來
+- **修法**：`FragmentRoomView.tsx` 裡兩處單獨使用 `.dg-canvas-frame` 的地方（lobby 狀態卡片、等待隊友狀態卡片）都明確加上 `margin:'6px auto 0'`，讓它們在變寬的 `<main>` 裡確實置中
+- 額外確認了 DRAW_GUESS、DRAW_TELEPHONE 兩個模式的 lobby 卡片是跟工具列並排在 `.dg-canvas-row`（flex row）裡面，不是像 FRAGMENT_DRAW 那樣單獨顯示，所以這兩個模式不會有同樣的「單一卡片靠左、右邊留白」症狀，這次不需要對它們做任何修改
+- 已通過：`tsc`／`eslint`／`next build` 全數通過；直接檢查編譯後的最終產物確認置中樣式確實編譯進去；端對端功能回歸測試確認 FRAGMENT_DRAW 完整流程沒有受影響，額外確認 DRAW_GUESS／DRAW_TELEPHONE 完全不受影響
+- 老實說：這是純排版修正，這個環境沒有瀏覽器可以截圖驗證卡片實際是不是置中了，麻煩實際用電腦瀏覽器測試後再回饋
+
+## 縮小 width:100% 修正的作用範圍，改成只在手機斷點才生效
+
+- 使用者要求把先前那個「不分螢幕寬度、一律套用」的 `width:'100%'` 改成只在手機斷點（`max-width:640px`）才生效
+- **做法**：inline style 沒辦法表達 CSS media query，改成在 `globals.css` 新增 `.dg-fragment-page` class，規則本身寫在既有的 `@media (max-width: 640px)` 區塊裡；`FragmentRoomView.tsx` 的 `<main>` 移除 inline style 的 `width:'100%'`，改成 `className="dg-page dg-fragment-page"`，尺寸邏輯完全交給 CSS media query 決定，不再靠 JS/inline style 判斷
+- 這個 shrink-to-fit 問題只有在手機窄螢幕上才會造成「超出頁面」這種明顯的外觀症狀（桌機寬螢幕下 shrink-to-fit 算出來的寬度通常還是夠放得下內容），縮小範圍只在手機斷點套用，桌機版的版面計算方式完全不受這個修正影響
+- 已通過：`tsc`／`eslint`／`next build` 全數通過；直接讀取編譯後的最終 CSS 產物，確認 `.dg-fragment-page{width:100%}` 確實被包在 `@media (max-width:640px){...}` 區塊裡面，不是全域規則；端對端功能回歸測試確認 FRAGMENT_DRAW 完整流程沒有受影響
 - 比照音樂猜歌專案：Vultr VPS、PostgreSQL、Cloudflare Tunnel（沿用同一帳號另開子網域）、systemd 服務（`ExecStart` 改為執行 `tsx server.ts` 或先 `next build` 再啟動，需視正式環境是否安裝 `tsx` 決定）
 - 行動裝置實測、效能檢查

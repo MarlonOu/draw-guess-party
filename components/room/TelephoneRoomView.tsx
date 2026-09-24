@@ -9,6 +9,7 @@ import { StrokeReplay } from '../canvas/StrokeReplay';
 import { PlayerList } from './PlayerList';
 import { BackButton } from '../nav/BackButton';
 import { CopyButton } from './CopyButton';
+import { QrCodeButton } from './QrCodeButton';
 import { StatusOverlay } from './StatusOverlay';
 import { RoomSettingsPanel } from './RoomSettingsPanel';
 import { SoundToggleButton } from './SoundToggleButton';
@@ -377,6 +378,7 @@ export function TelephoneRoomView({
                       {pageUrl}
                     </span>
                     <CopyButton value={pageUrl} label="複製邀請連結" />
+                    <QrCodeButton value={pageUrl} label="顯示邀請連結的 QR code" />
                   </div>
                 )}
               </div>

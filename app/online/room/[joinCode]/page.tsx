@@ -9,6 +9,7 @@ import { GuessChatBox } from '../../../../components/room/GuessChatBox';
 import { RoundTimer } from '../../../../components/room/RoundTimer';
 import { BackButton } from '../../../../components/nav/BackButton';
 import { CopyButton } from '../../../../components/room/CopyButton';
+import { QrCodeButton } from '../../../../components/room/QrCodeButton';
 import { StatusOverlay } from '../../../../components/room/StatusOverlay';
 import { StatusIcon } from '../../../../components/room/StatusIcon';
 import { RoomSettingsPanel } from '../../../../components/room/RoomSettingsPanel';
@@ -433,6 +434,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
                         {pageUrl}
                       </span>
                       <CopyButton value={pageUrl} label="複製邀請連結" />
+                      <QrCodeButton value={pageUrl} label="顯示邀請連結的 QR code" />
                     </div>
                   )}
                 </div>
