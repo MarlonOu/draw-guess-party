@@ -147,10 +147,12 @@ export interface ServerToClientEvents {
         }
   ) => void;
   /**
-   * FRAGMENT_DRAW 模式：猜題階段，廣播給全房間所有人（不只是要猜的外組玩家）——
-   * 自己這組的兩位成員也會收到（isOwnTeam 是 true），純粹通知「輪到你們這組
-   * 被猜了」，前端依 isOwnTeam 決定要不要顯示猜測輸入框（自己組的作品不用猜、
-   * 也不該讓他猜，見伺服器端 submitFragmentGuess 的驗證）。
+   * FRAGMENT_DRAW 模式：私訊，只送給「現在該猜這一組」的那位玩家，告知他
+   * 該猜什麼。跟舊版最大的差異：不再是廣播給全房間所有人（含自己組成員）
+   * ——每個人各自依自己的節奏往下猜（見使用者需求「每個人可以一直接續猜題，
+   * 直到把所有題目猜完」），不會有「全房間現在都在看同一組」這回事，自己組
+   * 的作品本來就不會出現在自己的猜題序列裡，不需要另外用 isOwnTeam 判斷
+   * 要不要顯示猜測輸入框——收到這個事件就代表「這是你現在該猜的」。
    */
   'fragment:guessPhase': (payload: {
     teamId: string;
@@ -159,7 +161,6 @@ export interface ServerToClientEvents {
     keptHalf: FragmentHalf;
     keptStrokes: Stroke[];
     completedStrokes: Stroke[];
-    isOwnTeam: boolean;
   }) => void;
   /** 廣播：所有組別都公布猜完了，公布每一組的完整作品跟外組玩家各自的猜測，供大家欣賞 */
   'fragment:reveal': (payload: FragmentReveal) => void;

@@ -76,7 +76,15 @@ export function GuessChatBox({ messages, onSend, disabled = false, maxHeight = 3
           disabled={disabled}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSubmit();
+            // 中文輸入法（注音、拼音、倉頡……任何需要候選字的輸入法）在組字
+            // 過程中，使用者按 Enter 是為了「確認選字」，不是要送出——如果
+            // 沒有排除這個狀態，Enter 鍵會被誤判成「使用者要送出」，把還
+            // 沒組字完成的片段（例如注音符號本身）直接送出，使用者體驗被
+            // 打斷、還要重新輸入一次，嚴重的話甚至可能因此拖到逾時。
+            // e.nativeEvent.isComposing 是瀏覽器原生提供的 IME 組字狀態旗標，
+            // 組字進行中是 true，這裡排除掉，只有真的按下 Enter 送出（不是
+            // 選字用的 Enter）才觸發。
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSubmit();
           }}
           placeholder={disabled ? '輪到你畫圖，不能發言' : '輸入猜題或聊天內容'}
           className="dg-input"

@@ -26,6 +26,7 @@ import {
 import {
   beginFragmentRound,
   forceAdvanceFragmentOnRemoval,
+  checkFragmentGuessingAfterRemoval,
   clearFragmentTimersForRoom,
   sendFragmentDrawing1Turn,
   sendFragmentDrawing2Turn,
@@ -277,6 +278,14 @@ function performRemoval(io: Server, joinCode: string, playerId: string): void {
     const affected = handleFragmentPlayerRemoval(room, playerId);
     if (affected) {
       forceAdvanceFragmentOnRemoval(io, room, affected.teamId);
+    } else if (room.fragment?.guessingStarted && !room.fragment.revealed) {
+      // 這個人不屬於任何還沒完成的組別（例如所有組別都已經畫完、房間正處於
+      // 猜題階段），但他的離開仍然可能讓「所有連線中的玩家都猜完了」這個
+      // 公布條件剛好成立——見 fragmentOrchestrator.checkFragmentGuessingAfterRemoval
+      // 的說明：不重新檢查的話，可能發生「還差最後一人的猜測，那個人自己
+      // 先斷線離開，其他人早就都猜完了，卻永遠不會觸發公布」這種房間卡死
+      // 的邊界情況。
+      checkFragmentGuessingAfterRemoval(io, room, playerId);
     }
     return;
   }

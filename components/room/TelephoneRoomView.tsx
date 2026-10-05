@@ -445,7 +445,10 @@ export function TelephoneRoomView({
                     value={guessInput}
                     onChange={(e) => setGuessInput(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSubmitGuess();
+                      // 中文輸入法組字過程中按 Enter 是為了確認選字，不是要
+                      // 送出——排除 isComposing 才不會把還沒打完的片段誤送
+                      // 出去，理由詳見 GuessChatBox.tsx 同樣的處理。
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSubmitGuess();
                     }}
                     placeholder="這是在畫什麼？寫下你的猜測"
                     style={{ flex: 1 }}

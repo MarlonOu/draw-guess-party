@@ -1,4 +1,4 @@
-import type { Stroke } from '../types/stroke';
+import type { Stroke, StrokePoint } from '../types/stroke';
 import type { FragmentHalf, FragmentSplitOrientation } from '../types/room';
 import type { WordBankEntry } from '../types/word';
 
@@ -90,28 +90,57 @@ export function filterStrokesByHalf(
   keepHalf: FragmentHalf
 ): Stroke[] {
   const axis = orientation === 'vertical' ? 'x' : 'y';
+  const classify = (p: StrokePoint): FragmentHalf => (p[axis] < 0.5 ? 'a' : 'b');
+
+  /**
+   * 在兩個分屬不同半的相鄰點之間，內插出剛好落在切割線（axis 座標 = 0.5）
+   * 上的那個點——這是修正「移動太快，分割時接近邊界的部分會消失」這個問題
+   * 的關鍵：原本的版本沒有做這個內插，單純看每個取樣點各自落在哪一半，
+   * 只保留「連續兩個以上同屬保留半邊」的點才連成一段線；使用者移動太快時，
+   * 瀏覽器 pointermove 事件的取樣密度跟不上移動速度，靠近邊界的地方可能
+   * 整段只捕捉到 1 個點就跨到另一半去了，這個孤立的單點會被判定「連不成
+   * 一段可見的線」而整段捨棄，畫面上就是使用者形容的「接近邊界的部分
+   * 消失」。補上這個邊界內插之後，不管取樣點多稀疏，跨越邊界的那一刻
+   * 一定會算出一個精確落在切割線上的點，保留的那一段線可以確實延伸到
+   * 邊界為止，不會再有「明明畫過那裡、卻完全沒有任何痕跡」的情況。
+   */
+  const interpolateAtBoundary = (p1: StrokePoint, p2: StrokePoint): StrokePoint => {
+    const t = (0.5 - p1[axis]) / (p2[axis] - p1[axis]);
+    return { x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t, t: p1.t + (p2.t - p1.t) * t };
+  };
+
   const result: Stroke[] = [];
 
   for (const stroke of strokes) {
-    let currentRun: typeof stroke.points = [];
-    let segmentIndex = 0;
+    const pts = stroke.points;
+    const segments: StrokePoint[][] = [];
+    let currentRun: StrokePoint[] = [];
 
-    const flushRun = () => {
-      if (currentRun.length > 1) {
-        result.push({ ...stroke, id: `${stroke.id}-seg${segmentIndex++}`, points: currentRun });
-      }
-      currentRun = [];
-    };
+    for (let i = 0; i < pts.length; i++) {
+      const point = pts[i];
+      const isKept = classify(point) === keepHalf;
 
-    for (const point of stroke.points) {
-      const half: FragmentHalf = point[axis] < 0.5 ? 'a' : 'b';
-      if (half === keepHalf) {
+      if (isKept) {
+        if (currentRun.length === 0 && i > 0 && classify(pts[i - 1]) !== keepHalf) {
+          // 剛從禁止半邊跨進保留半邊：插入邊界交點，讓這一段從切割線
+          // 精確開始，不是憑空跳到這個取樣點才開始。
+          currentRun.push(interpolateAtBoundary(pts[i - 1], point));
+        }
         currentRun.push(point);
-      } else {
-        flushRun();
+      } else if (currentRun.length > 0) {
+        // 剛從保留半邊跨出去：插入邊界交點收尾這一段，讓保留的內容確實
+        // 延伸到切割線為止，然後才結束（currentRun 裡這時一定是保留半邊
+        // 的點，i-1 也一定是保留半邊，內插沒有問題）。
+        currentRun.push(interpolateAtBoundary(pts[i - 1], point));
+        if (currentRun.length > 1) segments.push(currentRun);
+        currentRun = [];
       }
     }
-    flushRun();
+    if (currentRun.length > 1) segments.push(currentRun);
+
+    segments.forEach((points, segmentIndex) => {
+      result.push({ ...stroke, id: `${stroke.id}-seg${segmentIndex}`, points });
+    });
   }
 
   return result;

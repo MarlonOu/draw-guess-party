@@ -51,8 +51,9 @@ type FragmentYourTurn =
       keptStrokes: Stroke[];
     };
 
-/** FRAGMENT_DRAW 模式：猜題階段廣播的內容，isOwnTeam 決定前端要不要顯示
- *  猜測輸入框（自己這組的兩位成員收到的也是這個事件，但 isOwnTeam 是 true） */
+/** FRAGMENT_DRAW 模式：猜題階段私訊收到的內容——只有「這是你現在該猜的」
+ *  這一種情境會收到（見 events.ts 的 fragment:guessPhase 說明，不再有
+ *  isOwnTeam 這個判斷欄位，自己組的作品本來就不會出現在自己的猜題序列裡）。 */
 interface FragmentGuessPhase {
   teamId: string;
   word: string;
@@ -60,7 +61,6 @@ interface FragmentGuessPhase {
   keptHalf: FragmentHalf;
   keptStrokes: Stroke[];
   completedStrokes: Stroke[];
-  isOwnTeam: boolean;
 }
 
 /** FRAGMENT_DRAW 模式：起手在補全階段旁觀時收到的內容，見 events.ts 的

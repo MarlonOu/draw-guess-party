@@ -40,7 +40,6 @@ interface FragmentGuessPhase {
   keptHalf: FragmentHalf;
   keptStrokes: Stroke[];
   completedStrokes: Stroke[];
-  isOwnTeam: boolean;
 }
 
 interface FragmentTeammateDrawing {
@@ -148,23 +147,43 @@ export function FragmentRoomView({
   const isDrawingSubphase = yourTurn !== null;
 
   /**
-   * 倒數橫條：跟接龍模式一樣，用伺服器廣播的時間戳換算，全房間（含旁觀者）
-   * 都能算出同步一致的剩餘秒數，不需要伺服器每秒推播。這個模式的「目前該
-   * 顯示哪一組的倒數」看自己所屬的那一組（作畫階段）或目前猜題階段的那一組。
+   * 猜題階段倒數的時間基準：改成客戶端收到 fragment:guessPhase 私訊那一刻
+   * 記錄的本地時間戳，不是伺服器廣播的時間戳——這個模式的猜題階段改成每個
+   * 人各自依自己的節奏往下猜（不再有「全房間共用同一組在被猜」這回事），
+   * 伺服器內部雖然還是有記錄每位玩家各自的猜題起始時間，但那是純粹給伺服器
+   * 自己排程逾時計時器用的內部狀態，不需要（也沒有必要）曝露成一個「大家
+   * 共用的同步時間戳」放進公開摘要——每個人的倒數本來就只跟自己有關，用
+   * 「我自己收到這則私訊的當下」當基準已經足夠合理，不需要追求跟伺服器
+   * 時間戳完全一致（頂多差在网路傳輸的些微延遲，這個誤差感受不到）。
+   * 換到下一組（guessPhase.teamId 改變）時要重新記錄。
+   */
+  const [guessPhaseStartedAtLocal, setGuessPhaseStartedAtLocal] = useState<number | null>(null);
+  const guessPhaseTeamId = guessPhase?.teamId ?? null;
+  useEffect(() => {
+    if (guessPhaseTeamId !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 依外部事件（收到新的猜題私訊）記錄本地起始時間，非衍生渲染狀態
+      setGuessPhaseStartedAtLocal(Date.now());
+    }
+  }, [guessPhaseTeamId]);
+
+  /**
+   * 倒數橫條：跟接龍模式一樣，用時間戳換算，不需要伺服器每秒推播。這個模式
+   * 的「目前該顯示什麼倒數」看自己所屬的那一組（作畫階段）或自己目前猜題
+   * 私訊的起始時間（猜題階段，見上面 guessPhaseStartedAtLocal 的說明）。
    */
   useEffect(() => {
     const shouldTick =
-      !isRevealing && (myTeam?.subPhase === 'drawing1' || myTeam?.subPhase === 'drawing2' || f?.activeGuessTeamId);
+      !isRevealing && (myTeam?.subPhase === 'drawing1' || myTeam?.subPhase === 'drawing2' || guessPhase !== null);
     if (!shouldTick) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [isRevealing, myTeam?.subPhase, f?.activeGuessTeamId]);
+  }, [isRevealing, myTeam?.subPhase, guessPhase]);
 
   let timeLimitSec = 0;
   let subPhaseStartedAt: number | null = null;
   if (guessPhase) {
     timeLimitSec = FRAGMENT_GUESS_TIMEOUT_SEC;
-    subPhaseStartedAt = f?.guessPhaseStartedAt ?? null;
+    subPhaseStartedAt = guessPhaseStartedAtLocal;
   } else if (myTeam?.subPhase === 'drawing1') {
     timeLimitSec = FRAGMENT_DRAWING1_TIMEOUT_SEC;
     subPhaseStartedAt = myTeam.subPhaseStartedAt;
@@ -426,6 +445,8 @@ export function FragmentRoomView({
           yourTurn={yourTurn}
           teammateDrawing={teammateDrawing}
           myTeamSubPhase={myTeam?.subPhase ?? null}
+          guessingStarted={f?.guessingStarted ?? false}
+          playersStillGuessingCount={f?.playersStillGuessingCount ?? 0}
           color={color}
           width={width}
           tool={tool}
@@ -453,6 +474,13 @@ interface FragmentDrawingSectionProps {
   yourTurn: FragmentYourTurn | null;
   teammateDrawing: FragmentTeammateDrawing | null;
   myTeamSubPhase: 'drawing1' | 'drawing2' | 'done' | null;
+  /** 猜題階段是否已經開始（所有組別都畫完了）——用來判斷「這一組已經 done」
+   *  這個狀態，要顯示「還在等其他組畫完」還是「已經在猜題階段、等其他人
+   *  猜完」，兩種文字含意不同，不能混用同一句。 */
+  guessingStarted: boolean;
+  /** 猜題階段還有幾位連線中的玩家沒猜完，給「等其他人猜完」的畫面顯示整體
+   *  進度用（自己已經沒有東西可猜時才會顯示這個畫面）。 */
+  playersStillGuessingCount: number;
   color: string;
   width: number;
   tool: 'pen' | 'eraser';
@@ -471,12 +499,15 @@ interface FragmentDrawingSectionProps {
  * （見 globals.css 的 .dg-fragment-canvas-frame），見使用者需求。三種情況分開處理：
  *  - 輪到自己畫（起手或補全）：完整的工具列＋畫布＋交卷按鈕
  *  - 隊友正在補全，自己是起手、可以旁觀：唯讀畫布顯示即時過程，沒有工具列
- *  - 其餘（等隊友開始、或還在等其他組畫完）：純文字狀態卡片
+ *  - 其餘（等隊友開始、還在等其他組畫完、或猜題階段自己暫時沒有下一組要猜、
+ *    在等其他人猜完）：純文字狀態卡片
  */
 function FragmentDrawingSection({
   yourTurn,
   teammateDrawing,
   myTeamSubPhase,
+  guessingStarted,
+  playersStillGuessingCount,
   color,
   width,
   tool,
@@ -577,7 +608,12 @@ function FragmentDrawingSection({
     myTeamSubPhase === 'drawing1'
       ? '等待隊友開始畫第一筆'
       : myTeamSubPhase === 'done'
-        ? '你們這組已經畫完了，等其他組畫完才會進入猜題階段'
+        ? guessingStarted
+          ? // 已經進入猜題階段、自己也已經把該猜的組別全部猜完了，只是暫時
+            // 沒有下一組可猜——不是「還在等畫完」，文字要對應到正確的階段，
+            // 不然使用者會誤以為系統卡住了。
+            `你已經猜完所有作品了，還有 ${playersStillGuessingCount} 人在猜，全部猜完後會公布結果`
+          : '你們這組已經畫完了，等其他組畫完才會進入猜題階段'
         : '等待遊戲開始';
 
   return (
@@ -599,9 +635,10 @@ interface FragmentGuessSectionProps {
 }
 
 /**
- * 猜題階段的畫面：廣播給全房間所有人（見 fragmentOrchestrator.ts 的
- * sendFragmentGuessPhase），自己這組的兩位成員也會收到（isOwnTeam 為 true），
- * 只是不顯示猜測輸入框——自己組的作品不用猜，看著其他人猜就好。
+ * 猜題階段的畫面：私訊給「現在該猜這一組」的玩家（見
+ * fragmentOrchestrator.ts 的 sendFragmentGuessTurnToPlayer），收到這個 prop
+ * 就代表這是輪到自己猜的組別，不再需要 isOwnTeam 判斷要不要顯示猜測輸入框
+ * ——自己組的作品本來就不會被排進自己的猜題序列裡。
  */
 function FragmentGuessSection({
   guessPhase,
@@ -613,9 +650,7 @@ function FragmentGuessSection({
   const combinedStrokes = [...guessPhase.keptStrokes, ...guessPhase.completedStrokes];
   return (
     <div className="dg-fragment-canvas-frame" style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ fontSize: 14, fontWeight: 800, textAlign: 'center' }}>
-        {guessPhase.isOwnTeam ? '這是你們這組的作品，其他人正在猜' : '這一組畫的是什麼？'}
-      </p>
+      <p style={{ fontSize: 14, fontWeight: 800, textAlign: 'center' }}>這一組畫的是什麼？</p>
       <div
         style={{
           width: '100%',
@@ -629,44 +664,48 @@ function FragmentGuessSection({
       >
         <StrokeReplay strokes={combinedStrokes} emptyLabel="（沒有畫）" />
       </div>
-      {!guessPhase.isOwnTeam && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
-            <input
-              type="text"
-              value={guessInput}
-              onChange={(e) => onGuessInputChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onSubmitGuess();
-              }}
-              placeholder="輸入你的猜測"
-              className="dg-input"
-              disabled={hasGuessed}
-              style={{ maxWidth: 240 }}
-            />
-            <button
-              type="button"
-              onClick={onSubmitGuess}
-              disabled={hasGuessed}
-              className={hasGuessed ? 'dg-btn' : 'dg-btn dg-btn-primary'}
-              // 不設定固定寬高，寬度、高度都跟著文字內容本身自然撐開（「已送出」
-              // 比「送出猜測」短，按鈕就該跟著變窄，不需要兩個按鈕維持一樣寬）；
-              // 容器加上 alignItems:'center'（見上面），按鈕才不會被預設的
-              // stretch 行為拉伸成跟旁邊 .dg-input 一樣高——.dg-input 的內距、
-              // 字體都比這個按鈕大，不做這個修正的話按鈕會被撐得比實際文字內容
-              // 需要的高度大上一圈，看起來不成比例。
-              style={{ padding: '8px 14px', fontSize: 13, width: 'auto', height: 'auto' }}
-            >
-              {hasGuessed ? '已送出' : '送出猜測'}
-            </button>
-          </div>
-          {hasGuessed && (
-            <p style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-              每組只能猜一次，已經送出你的猜測，等其他人猜完就會換下一組
-            </p>
-          )}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={guessInput}
+            onChange={(e) => onGuessInputChange(e.target.value)}
+            onKeyDown={(e) => {
+              // 中文輸入法組字過程中按 Enter 是為了確認選字，不是要送出——
+              // 排除 isComposing 才不會把還沒打完的片段（例如注音符號本身）
+              // 誤送出去，理由詳見 GuessChatBox.tsx 同樣的處理。這個 bug
+              // 原本會讓使用注音、拼音等輸入法的玩家，組字被 Enter 鍵一直
+              // 打斷、要不斷重新輸入，嚴重時甚至可能因此拖到猜題逾時，
+              // 被系統自動代打成「（沒有人猜）」。
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) onSubmitGuess();
+            }}
+            placeholder="輸入你的猜測"
+            className="dg-input"
+            disabled={hasGuessed}
+            style={{ maxWidth: 240 }}
+          />
+          <button
+            type="button"
+            onClick={onSubmitGuess}
+            disabled={hasGuessed}
+            className={hasGuessed ? 'dg-btn' : 'dg-btn dg-btn-primary'}
+            // 不設定固定寬高，寬度、高度都跟著文字內容本身自然撐開（「已送出」
+            // 比「送出猜測」短，按鈕就該跟著變窄，不需要兩個按鈕維持一樣寬）；
+            // 容器加上 alignItems:'center'（見上面），按鈕才不會被預設的
+            // stretch 行為拉伸成跟旁邊 .dg-input 一樣高——.dg-input 的內距、
+            // 字體都比這個按鈕大，不做這個修正的話按鈕會被撐得比實際文字內容
+            // 需要的高度大上一圈，看起來不成比例。
+            style={{ padding: '8px 14px', fontSize: 13, width: 'auto', height: 'auto' }}
+          >
+            {hasGuessed ? '已送出' : '送出猜測'}
+          </button>
         </div>
-      )}
+        {hasGuessed && (
+          <p style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+            每組只能猜一次，已經送出你的猜測，等其他人猜完就會換下一組
+          </p>
+        )}
+      </div>
     </div>
   );
 }

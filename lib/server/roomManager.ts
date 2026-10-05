@@ -122,14 +122,23 @@ export interface FragmentState {
   /** 每一組各自獨立推進，不是像接龍模式那樣共用一個「目前輪到第幾位」的序列 */
   teams: FragmentTeamState[];
   /**
-   * 猜題階段：目前輪到公布、讓外組玩家猜的是 teams 陣列的第幾組（依組別建立
-   * 順序，一組一組來）。-1 代表猜題階段還沒開始（可能是還有組別在畫，或已經
-   * 全部結束、revealed 已經是 true 了）。
+   * 猜題階段是否已經開始（所有組別都畫完了才會是 true）。
+   *
+   * 使用者明確要求這個階段不要「一組一組公布、大家要互相等」，改成「每個人
+   * 各自依自己的節奏往下猜，猜完自己該猜的所有組別後才等其他人」——所以這裡
+   * 不需要（也不能有）「目前公布到第幾組」這種全房間共用的單一進度指標，
+   * 每個人現在該猜哪一組，是動態依「這個人對哪些組別已經留下猜測紀錄」去
+   * 推算出來的（見 findNextTeamToGuessForPlayer），不是一個要另外維護、
+   * 讓所有人共用同一個值的欄位。
    */
-  activeGuessTeamIndex: number;
-  /** 目前這組作品公布、開放猜題的時間戳，跟 TelephoneState.subPhaseStartedAt
-   *  同樣的設計理由：讓大家算出同步倒數 */
-  guessPhaseStartedAt: number | null;
+  guessingStarted: boolean;
+  /**
+   * 每位玩家「目前正在猜的這一組」開始的時間戳，key 是玩家 id——因為現在
+   * 每個人進度不同，倒數計時器要各自獨立算，不能像舊版那樣共用一個
+   * 全房間的時間戳。玩家猜完自己該猜的所有組別後，這裡的紀錄會被移除
+   * （不需要繼續倒數）。
+   */
+  guessStartedAtByPlayer: Map<string, number>;
   /** 是否已經全部公布完畢，公布之後就不會再回到 drawing/guessing */
   revealed: boolean;
   /** 「準備好下一場」投票名單，設計理由跟 TelephoneState.readyForNextRoundIds
@@ -485,10 +494,11 @@ function toFragmentSummary(room: RoomState): FragmentSummary | null {
   const f = room.fragment;
   if (!f) return null;
 
-  const activeGuessTeam =
-    !f.revealed && f.activeGuessTeamIndex >= 0 && f.activeGuessTeamIndex < f.teams.length
-      ? f.teams[f.activeGuessTeamIndex]
-      : null;
+  const playersStillGuessingCount = f.guessingStarted
+    ? Array.from(room.players.values()).filter(
+        (p) => p.connected && findNextTeamToGuessForPlayer(f, p.id) !== null
+      ).length
+    : 0;
 
   return {
     teams: f.teams.map((t) => ({
@@ -499,14 +509,8 @@ function toFragmentSummary(room: RoomState): FragmentSummary | null {
       activePlayerId:
         t.subPhase === 'drawing1' ? t.playerIds[0] : t.subPhase === 'drawing2' ? t.playerIds[1] : null,
     })),
-    activeGuessTeamId: activeGuessTeam?.id ?? null,
-    guessPhaseStartedAt: f.guessPhaseStartedAt,
-    guessedPlayerIds: activeGuessTeam ? Array.from(activeGuessTeam.guesses.keys()) : [],
-    remainingGuessTeams: f.revealed
-      ? 0
-      : f.activeGuessTeamIndex >= 0
-        ? f.teams.length - f.activeGuessTeamIndex
-        : 0,
+    guessingStarted: f.guessingStarted,
+    playersStillGuessingCount,
     reveal: f.revealed
       ? {
           teams: f.teams.map((t) => ({
@@ -1223,8 +1227,8 @@ export function beginFragmentGame(
   room.status = 'playing';
   room.fragment = {
     teams,
-    activeGuessTeamIndex: -1,
-    guessPhaseStartedAt: null,
+    guessingStarted: false,
+    guessStartedAtByPlayer: new Map(),
     revealed: false,
     readyForNextRoundIds: new Set(),
   };
@@ -1366,25 +1370,65 @@ export function submitFragmentDrawing2(
 }
 
 /**
- * 所有組別都畫完後，正式開始猜題階段：從第一組開始，依 teams 陣列順序，
- * 一組一組公布給其他組的所有人猜。只有在真的所有組都 'done' 時才會生效，
- * 呼叫端（fragmentOrchestrator）要先確認 submitFragmentDrawing2 回傳的
- * allTeamsDone 是 true 才呼叫這個函式，這裡不重複檢查（避免兩處邏輯各自
- * 判斷一次容易漏改其中一處）。
+ * 所有組別都畫完後，正式開始猜題階段。跟舊版不同，這裡不會指定「從第幾組
+ * 開始」——每個人現在該猜哪一組是動態算出來的（見 findNextTeamToGuessForPlayer），
+ * 這個函式只需要把 guessingStarted 標記成 true，讓 findNextTeamToGuessForPlayer
+ * 的判斷條件成立即可。只有在真的所有組都 'done' 時才會生效，呼叫端
+ * （fragmentOrchestrator）要先確認 submitFragmentDrawing2 回傳的 allTeamsDone
+ * 是 true 才呼叫這個函式，這裡不重複檢查（避免兩處邏輯各自判斷一次容易漏改
+ * 其中一處）。
  */
 export function maybeStartFragmentGuessPhase(room: RoomState): void {
   const f = room.fragment;
   if (!f || f.teams.length === 0) return;
-  f.activeGuessTeamIndex = 0;
-  f.guessPhaseStartedAt = Date.now();
+  f.guessingStarted = true;
 }
 
 /**
- * 外組玩家對目前正在公布猜題的那一組作品送出猜測。
- * 輸出：null（不符合條件：不是外組玩家、這組根本不是目前在猜的那組、已經
- * 猜過了……）或 { teamId; allGuessed: boolean }，allGuessed 代表這一票是不是
- * 剛好湊滿所有「應該要猜的人」（房間裡目前連線中、且不是這組成員的所有人）——
- * 呼叫端據此決定要不要呼叫 advanceFragmentGuessTeam 進到下一組。
+ * 找出這個玩家「現在該猜哪一組」——依 teams 陣列順序，找第一個「不是自己組、
+ * 自己還沒對它留下猜測紀錄」的組別。這是整個「玩家各自依自己節奏推進」設計
+ * 的核心：不需要另外維護一個「這個人目前進度到第幾組」的欄位，直接檢查
+ * teams 裡每一組的 guesses Map 有沒有這個玩家的紀錄，天生就是「這個人猜過
+ * 哪些組」的真實紀錄，用它反推「還沒猜的第一組是誰」不會有額外狀態要同步、
+ * 不會有跟 guesses 本身對不上的風險。
+ * 輸出：null 代表這個人已經把所有該猜的組別（不含自己組）都猜完了。
+ */
+function findNextTeamToGuessForPlayer(f: FragmentState, playerId: string): FragmentTeamState | null {
+  for (const team of f.teams) {
+    if (team.playerIds.includes(playerId)) continue; // 自己組的作品不用猜
+    if (!team.guesses.has(playerId)) return team;
+  }
+  return null;
+}
+
+/**
+ * 檢查是不是「所有連線中的玩家」都已經把該猜的組別全部猜完了——猜題階段
+ * 結束的條件不是「所有組別都被猜過」（人數一多，達成這個條件的時間點反而
+ * 比較晚），是「所有連線中的玩家自己都沒有下一組要猜了」，跟
+ * findNextTeamToGuessForPlayer 是同一套判斷邏輯、只是換成檢查全房間。
+ */
+function allConnectedPlayersFinishedGuessing(room: RoomState, f: FragmentState): boolean {
+  for (const player of room.players.values()) {
+    if (!player.connected) continue;
+    if (findNextTeamToGuessForPlayer(f, player.id) !== null) return false;
+  }
+  return true;
+}
+
+/**
+ * 某位玩家對「他現在該猜的那一組」送出猜測。跟舊版最大的差異：不再是「全
+ * 房間共用同一組在被猜」，每個人各自往自己的猜題序列前進，互不等待。
+ *
+ * 輸出：
+ *  - null：不符合條件（猜題階段還沒開始、已經公布過了、這個人已經沒有
+ *    下一組要猜了……）
+ *  - { teamId; hasNextTeam; allPlayersDone }：
+ *    - teamId：剛剛猜的是哪一組
+ *    - hasNextTeam：這個人猜完這一組之後，還有沒有下一組要猜（有的話
+ *      呼叫端要接著私訊通知他下一組是什麼；沒有的話這個人就進入「等待
+ *      其他人猜完」的狀態）
+ *    - allPlayersDone：這一票是不是剛好讓「所有連線中的玩家」都猜完了
+ *      該猜的組別——呼叫端據此決定要不要正式進入公布階段
  *
  * 猜測文字統一裁切到 60 字、去除頭尾空白，避免整段貼上的內容把畫面撐爆；
  * 空字串一律視為「（空白）」。
@@ -1393,44 +1437,61 @@ export function submitFragmentGuess(
   room: RoomState,
   playerId: string,
   text: string
-): { teamId: string; allGuessed: boolean } | null {
+): { teamId: string; hasNextTeam: boolean; allPlayersDone: boolean } | null {
   const f = room.fragment;
-  if (!f || f.activeGuessTeamIndex < 0 || f.activeGuessTeamIndex >= f.teams.length) return null;
-  const team = f.teams[f.activeGuessTeamIndex];
-  if (team.playerIds.includes(playerId)) return null; // 自己組的作品不用猜、也不該讓他猜
+  if (!f || !f.guessingStarted || f.revealed) return null;
   const player = room.players.get(playerId);
   if (!player || !player.connected) return null;
-  if (team.guesses.has(playerId)) return null; // 已經猜過了，不重複計入
+
+  const team = findNextTeamToGuessForPlayer(f, playerId);
+  if (!team) return null; // 這個人已經猜完了，不該再收到猜題請求
 
   const trimmed = text.trim().slice(0, 60) || '（空白）';
   team.guesses.set(playerId, { displayName: player.displayName, text: trimmed });
 
-  const eligibleGuesserIds = Array.from(room.players.values())
-    .filter((p) => p.connected && !team.playerIds.includes(p.id))
-    .map((p) => p.id);
-  const allGuessed = eligibleGuesserIds.every((id) => team.guesses.has(id));
+  const nextTeam = findNextTeamToGuessForPlayer(f, playerId);
+  if (nextTeam) {
+    f.guessStartedAtByPlayer.set(playerId, Date.now());
+  } else {
+    f.guessStartedAtByPlayer.delete(playerId);
+  }
 
-  return { teamId: team.id, allGuessed };
+  return { teamId: team.id, hasNextTeam: nextTeam !== null, allPlayersDone: allConnectedPlayersFinishedGuessing(room, f) };
 }
 
 /**
- * 目前這組作品的猜題時間到了（不管是真的所有人都猜完、還是逾時），推進到
- * 下一組繼續猜；如果剛好是最後一組，直接進入公布階段（revealed = true）。
- * 輸出：{ done: true }（全部組別都猜完了，已經進入公布階段）或
- * { done: false; nextTeamId }（推進到下一組繼續猜）
+ * 檢查是不是所有連線中的玩家都已經猜完了，是的話正式進入公布階段
+ * （revealed = true）。這個檢查需要在兩個不同時間點各自觸發——(1) 有人送出
+ * 猜測、剛好讓自己沒有下一組要猜時（見 submitFragmentGuess 回傳的
+ * allPlayersDone）、(2) 還在猜題階段的玩家斷線被硬移除時（見
+ * socketHandlers/room.ts 的 performRemoval）——第二種情況如果沒有重新檢查
+ * 一次，會發生「還差最後一人的猜測，那個人自己先斷線被移除，其他人早就
+ * 都猜完了，卻永遠不會有下一次投票觸發公布」這種房間卡住的邊界情況，跟
+ * DRAW_TELEPHONE 模式「準備好下一場」投票的 checkTelephoneVotesAndMaybeReturn
+ * 是同一種設計考量。
+ * 輸出：是否真的觸發了公布。
  */
-export function advanceFragmentGuessTeam(room: RoomState): { done: true } | { done: false; nextTeamId: string } {
-  const f = room.fragment!;
-  const nextIndex = f.activeGuessTeamIndex + 1;
-  if (nextIndex >= f.teams.length) {
-    f.revealed = true;
-    f.activeGuessTeamIndex = -1;
-    f.guessPhaseStartedAt = null;
-    return { done: true };
-  }
-  f.activeGuessTeamIndex = nextIndex;
-  f.guessPhaseStartedAt = Date.now();
-  return { done: false, nextTeamId: f.teams[nextIndex].id };
+export function finishFragmentGuessingIfAllDone(room: RoomState): boolean {
+  const f = room.fragment;
+  if (!f || !f.guessingStarted || f.revealed) return false;
+  if (!allConnectedPlayersFinishedGuessing(room, f)) return false;
+  f.revealed = true;
+  f.guessStartedAtByPlayer.clear();
+  return true;
+}
+
+/**
+ * 逾時保底：某位玩家「目前正在猜的那一組」時間到了，自動幫他送出空白猜測
+ * （「（沒有人猜）」），推進到他自己的下一組（如果有的話）——不這樣做的話，
+ * 有人只要不猜就能讓整個房間永遠卡在猜題階段進不了公布，跟接龍模式逾時
+ * 自動代打的設計理由一致。內部直接重用 submitFragmentGuess 的邏輯，不需要
+ * 另外寫一份幾乎一樣的程式碼。
+ */
+export function autoSubmitFragmentGuessForPlayer(
+  room: RoomState,
+  playerId: string
+): { teamId: string; hasNextTeam: boolean; allPlayersDone: boolean } | null {
+  return submitFragmentGuess(room, playerId, '（沒有人猜）');
 }
 
 /**

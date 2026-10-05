@@ -236,7 +236,11 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key !== 'Enter') return;
+              // 中文輸入法組字過程中按 Enter 是為了確認選字，不是要送出——
+              // 排除 isComposing 才不會在輸入中文暱稱、選字選到一半時，就
+              // 被誤判成「按 Enter 要加入房間」，理由詳見 GuessChatBox.tsx
+              // 同樣的處理。
+              if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
               const name = nameInput.trim();
               if (!name) return;
               const newIdentity: StoredIdentity = { displayName: name };

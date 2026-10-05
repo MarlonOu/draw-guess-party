@@ -6,8 +6,9 @@ import {
   submitFragmentDrawing2,
   maybeStartFragmentGuessPhase,
   submitFragmentGuess,
-  advanceFragmentGuessTeam,
+  finishFragmentGuessingIfAllDone,
   autoSubmitFragmentDrawing,
+  autoSubmitFragmentGuessForPlayer,
   voteReadyForNextFragmentRound,
   toRoomSummary,
 } from './roomManager';
@@ -28,12 +29,20 @@ const GUESS_TIMEOUT_MS = FRAGMENT_GUESS_TIMEOUT_SEC * 1000;
  * 有好幾組分別在畫，各組進度不一樣，必須各自各自的計時器，不能共用一個。
  */
 const teamDrawingTimers = new Map<string, ReturnType<typeof setTimeout>>();
-/** joinCode -> 猜題階段目前排程中的逾時計時器。猜題階段是「一組一組公布來猜」，
- *  同一時間只有一組正在被猜，這部分可以跟接龍模式一樣一個房間一個計時器就夠。 */
-const guessTimers = new Map<string, ReturnType<typeof setTimeout>>();
+/**
+ * `${joinCode}:${playerId}` -> 這位玩家目前排程中的猜題逾時計時器。猜題階段
+ * 改成每個人各自依自己的節奏往下猜（使用者明確要求「不用再等待該題所有人都
+ * 猜完才再猜下一題」），同一時間可能有好幾位玩家分別在猜不同組別，各自進度
+ * 不一樣，必須各自各自的計時器，不能像舊版那樣整個房間共用一個。
+ */
+const playerGuessTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function teamTimerKey(joinCode: string, teamId: string): string {
   return `${joinCode}:${teamId}`;
+}
+
+function playerTimerKey(joinCode: string, playerId: string): string {
+  return `${joinCode}:${playerId}`;
 }
 
 function clearTeamDrawingTimer(joinCode: string, teamId: string): void {
@@ -55,20 +64,31 @@ function clearAllTeamDrawingTimersForRoom(joinCode: string): void {
   }
 }
 
-function clearGuessTimer(joinCode: string): void {
-  const handle = guessTimers.get(joinCode);
+function clearPlayerGuessTimer(joinCode: string, playerId: string): void {
+  const key = playerTimerKey(joinCode, playerId);
+  const handle = playerGuessTimers.get(key);
   if (handle) {
     clearTimeout(handle);
-    guessTimers.delete(joinCode);
+    playerGuessTimers.delete(key);
+  }
+}
+
+function clearAllPlayerGuessTimersForRoom(joinCode: string): void {
+  const prefix = `${joinCode}:`;
+  for (const key of Array.from(playerGuessTimers.keys())) {
+    if (key.startsWith(prefix)) {
+      clearTimeout(playerGuessTimers.get(key)!);
+      playerGuessTimers.delete(key);
+    }
   }
 }
 
 /** 房間整個結束、或要重新開始一場新的（returnToLobby 之後）時呼叫，清掉這個
- *  房間所有還在排程中的計時器（各組的作畫逾時＋猜題逾時），避免計時器繼續
- *  留著、之後意外觸發已經不存在的房間/組別狀態。 */
+ *  房間所有還在排程中的計時器（各組的作畫逾時＋每位玩家各自的猜題逾時），
+ *  避免計時器繼續留著、之後意外觸發已經不存在的房間/組別/玩家狀態。 */
 export function clearFragmentTimersForRoom(joinCode: string): void {
   clearAllTeamDrawingTimersForRoom(joinCode);
-  clearGuessTimer(joinCode);
+  clearAllPlayerGuessTimersForRoom(joinCode);
 }
 
 /**
@@ -166,7 +186,7 @@ export function afterFragmentDrawingSubmit(
   if (allTeamsDone) {
     maybeStartFragmentGuessPhase(room);
     io.to(room.joinCode).emit('room:state', toRoomSummary(room));
-    sendFragmentGuessPhase(io, room);
+    sendFragmentGuessPhaseToAllEligiblePlayers(io, room);
   }
 }
 
@@ -187,85 +207,125 @@ function handleFragmentDrawing2Timeout(io: Server, room: RoomState, teamId: stri
 }
 
 /**
- * 猜題階段：把目前輪到公布的那一組作品廣播給「所有不是這組成員」的人，附上
- * 完整的作品內容（保留下來的那一半＋補全的那一半，組成完整圖），讓大家看圖
- * 猜題目；自己組的兩位成員收到的是另一個事件（fragment:ownTeamRevealed），
- * 純粹通知「輪到你們這組被猜了」，不需要猜測輸入框（見型別設計，這裡不重複
- * 說明廣播內容本身的差異，兩邊看到的畫面內容是一樣的，只是互動元件不同，
- * 交給前端依自己是不是這組成員決定要不要顯示猜測輸入框）。
+ * 猜題階段開始（所有組別都畫完的那一刻）：依序檢查房間裡每一位連線中的
+ * 玩家，各自私訊通知他「現在該猜哪一組」——不是廣播同一組給全房間，每個人
+ * 該猜的第一組可能不一樣（取決於他自己屬於哪一組，見 roomManager.ts 的
+ * findNextTeamToGuessForPlayer）。自己組的兩位成員因為沒有「不是自己組」的
+ * 對象可猜（只有兩組、四人的情況下，另一組剛好就是彼此要猜的對象；超過兩組
+ * 時，自己組的兩位成員一樣要依序猜過其他所有組），這裡統一交給
+ * sendFragmentGuessTurnToPlayer 判斷每個人各自有沒有東西可猜，不用另外
+ * 特例處理「自己組」這件事。
  */
-export function sendFragmentGuessPhase(io: Server, room: RoomState): void {
-  const f = room.fragment;
-  if (!f || f.activeGuessTeamIndex < 0 || f.activeGuessTeamIndex >= f.teams.length) return;
-  const team = f.teams[f.activeGuessTeamIndex];
-
-  const payload = {
-    teamId: team.id,
-    word: team.word,
-    splitOrientation: team.splitOrientation,
-    keptHalf: team.keptHalf ?? ('a' as const),
-    keptStrokes: team.keptStrokes,
-    completedStrokes: team.secondDrawerStrokes,
-    isOwnTeam: false,
-  };
-
+function sendFragmentGuessPhaseToAllEligiblePlayers(io: Server, room: RoomState): void {
   for (const player of room.players.values()) {
-    if (!player.socketId) continue;
-    io.to(player.socketId).emit('fragment:guessPhase', {
-      ...payload,
-      isOwnTeam: team.playerIds.includes(player.id),
-    });
+    if (!player.connected) continue;
+    sendFragmentGuessTurnToPlayer(io, room, player.id);
   }
-
-  clearGuessTimer(room.joinCode);
-  const timer = setTimeout(() => {
-    handleFragmentGuessTimeout(io, room);
-  }, GUESS_TIMEOUT_MS);
-  guessTimers.set(room.joinCode, timer);
 }
 
-/** 猜題逾時：不需要代猜（猜了算、沒猜就沒有），直接推進到下一組 */
-function handleFragmentGuessTimeout(io: Server, room: RoomState): void {
-  afterFragmentGuessAdvance(io, room);
-}
+/**
+ * 私訊通知某一位玩家「他現在該猜哪一組」，並排程只屬於他自己的猜題逾時
+ * 計時器。如果這個人已經沒有下一組要猜了（find 不到），就不送任何事件、
+ * 也不排計時器——前端會依「有沒有收到新的 fragment:guessPhase」＋
+ * room:state 裡的 guessingStarted／playersStillGuessingCount 自行判斷要
+ * 顯示「等待其他人猜完」的畫面。
+ */
+function sendFragmentGuessTurnToPlayer(io: Server, room: RoomState, playerId: string): void {
+  const f = room.fragment;
+  if (!f || !f.guessingStarted || f.revealed) return;
 
-function afterFragmentGuessAdvance(io: Server, room: RoomState): void {
-  clearGuessTimer(room.joinCode);
-  const result = advanceFragmentGuessTeam(room);
-  io.to(room.joinCode).emit('room:state', toRoomSummary(room));
-
-  if (result.done) {
-    const f = room.fragment;
-    if (!f) return;
-    io.to(room.joinCode).emit('fragment:reveal', {
-      teams: f.teams.map((t) => ({
-        teamId: t.id,
-        word: t.word,
-        memberIds: t.playerIds,
-        memberNames: t.playerIds.map((id) => room.players.get(id)?.displayName ?? '離線玩家') as [
-          string,
-          string,
-        ],
-        splitOrientation: t.splitOrientation,
-        keptHalf: t.keptHalf ?? 'a',
-        keptStrokes: t.keptStrokes,
-        completedStrokes: t.secondDrawerStrokes,
-        guesses: Array.from(t.guesses.entries()).map(([guesserId, g]) => ({
-          guesserId,
-          guesserDisplayName: g.displayName,
-          text: g.text,
-        })),
-      })),
-    });
-    room.status = 'finished';
-    io.to(room.joinCode).emit('room:state', toRoomSummary(room));
-    // 這個模式跟接龍模式一樣不做「自動開新一場」，公布完就停在 finished 畫面，
-    // 要不要再玩一輪由投票決定（見 handleFragmentVoteReady）。
-    io.to(room.joinCode).emit('game:finished', { nextMatchInSec: null });
+  const team = f.teams.find(
+    (t) => !t.playerIds.includes(playerId) && !t.guesses.has(playerId)
+  );
+  const player = room.players.get(playerId);
+  if (!team || !player?.socketId) {
+    clearPlayerGuessTimer(room.joinCode, playerId);
     return;
   }
 
-  sendFragmentGuessPhase(io, room);
+  io.to(player.socketId).emit('fragment:guessPhase', {
+    teamId: team.id,
+    word: team.word,
+    splitOrientation: team.splitOrientation,
+    keptHalf: team.keptHalf ?? 'a',
+    keptStrokes: team.keptStrokes,
+    completedStrokes: team.secondDrawerStrokes,
+  });
+
+  clearPlayerGuessTimer(room.joinCode, playerId);
+  const timer = setTimeout(() => {
+    handleFragmentGuessTimeoutForPlayer(io, room, playerId);
+  }, GUESS_TIMEOUT_MS);
+  playerGuessTimers.set(playerTimerKey(room.joinCode, playerId), timer);
+}
+
+/** 某位玩家「目前正在猜的那一組」逾時：不需要代猜出正確答案，直接自動送出
+ *  空白猜測（「（沒有人猜）」），推進到他自己的下一組——不這樣做的話，只要
+ *  有一個人不猜，整個房間就會永遠卡在猜題階段進不了公布。 */
+function handleFragmentGuessTimeoutForPlayer(io: Server, room: RoomState, playerId: string): void {
+  const result = autoSubmitFragmentGuessForPlayer(room, playerId);
+  if (!result) return;
+  afterFragmentGuessSubmit(io, room, playerId, result);
+}
+
+/**
+ * 某位玩家送出一次猜測（不管是主動送出還是逾時代打）之後的共同收尾：如果他
+ * 還有下一組要猜，私訊通知他下一組是什麼；如果這一票剛好讓所有連線中的
+ * 玩家都猜完了，正式進入公布階段，廣播完整的公布內容給全房間。
+ *
+ * 匯出這個函式的原因跟 afterFragmentDrawingSubmit 一致：斷線移除（見
+ * socketHandlers/room.ts 的 performRemoval）如果因為某人猜題階段離開、
+ * 讓剩下的人剛好全部都猜完了，也需要走這套收尾邏輯正式觸發公布，不需要
+ * 另外重寫一次。
+ */
+export function afterFragmentGuessSubmit(
+  io: Server,
+  room: RoomState,
+  playerId: string,
+  result: { teamId: string; hasNextTeam: boolean; allPlayersDone: boolean }
+): void {
+  clearPlayerGuessTimer(room.joinCode, playerId);
+
+  if (result.allPlayersDone) {
+    const triggered = finishFragmentGuessingIfAllDone(room);
+    if (triggered) {
+      clearAllPlayerGuessTimersForRoom(room.joinCode);
+      const f = room.fragment;
+      if (f) {
+        io.to(room.joinCode).emit('fragment:reveal', {
+          teams: f.teams.map((t) => ({
+            teamId: t.id,
+            word: t.word,
+            memberIds: t.playerIds,
+            memberNames: t.playerIds.map((id) => room.players.get(id)?.displayName ?? '離線玩家') as [
+              string,
+              string,
+            ],
+            splitOrientation: t.splitOrientation,
+            keptHalf: t.keptHalf ?? 'a',
+            keptStrokes: t.keptStrokes,
+            completedStrokes: t.secondDrawerStrokes,
+            guesses: Array.from(t.guesses.entries()).map(([guesserId, g]) => ({
+              guesserId,
+              guesserDisplayName: g.displayName,
+              text: g.text,
+            })),
+          })),
+        });
+        room.status = 'finished';
+      }
+      io.to(room.joinCode).emit('room:state', toRoomSummary(room));
+      // 這個模式跟接龍模式一樣不做「自動開新一場」，公布完就停在 finished
+      // 畫面，要不要再玩一輪由投票決定（見 handleFragmentVoteReady）。
+      io.to(room.joinCode).emit('game:finished', { nextMatchInSec: null });
+      return;
+    }
+  }
+
+  if (result.hasNextTeam) {
+    sendFragmentGuessTurnToPlayer(io, room, playerId);
+  }
+  io.to(room.joinCode).emit('room:state', toRoomSummary(room));
 }
 
 /**
@@ -314,10 +374,7 @@ export function handleFragmentSubmitDrawing2(io: Server, room: RoomState, player
 export function handleFragmentSubmitGuess(io: Server, room: RoomState, playerId: string, text: string): void {
   const result = submitFragmentGuess(room, playerId, text);
   if (!result) return;
-  io.to(room.joinCode).emit('room:state', toRoomSummary(room));
-  if (result.allGuessed) {
-    afterFragmentGuessAdvance(io, room);
-  }
+  afterFragmentGuessSubmit(io, room, playerId, result);
 }
 
 /** 理由跟 DRAW_TELEPHONE 的 handleTelephoneVoteReady 完全一致，見那邊的說明 */
@@ -342,4 +399,43 @@ export function forceAdvanceFragmentOnRemoval(io: Server, room: RoomState, teamI
 
   const allTeamsDone = f.teams.every((t) => t.subPhase === 'done');
   afterFragmentDrawingSubmit(io, room, teamId, allTeamsDone);
+}
+
+/**
+ * 猜題階段有玩家斷線被硬移除時呼叫：清掉他的猜題逾時計時器（人都不在了，
+ * 沒有東西可以逾時），並重新檢查是不是剩下的人全部都已經猜完——這個檢查
+ * 理由跟 DRAW_TELEPHONE 的 checkTelephoneVotesAndMaybeReturn 一致，見
+ * roomManager.finishFragmentGuessingIfAllDone 的說明：不重新檢查的話，可能
+ * 發生「還差最後一人的猜測，那個人自己先斷線被移除，其他人早就都猜完了，
+ * 卻永遠不會觸發公布」這種房間卡住的邊界情況。
+ */
+export function checkFragmentGuessingAfterRemoval(io: Server, room: RoomState, removedPlayerId: string): void {
+  clearPlayerGuessTimer(room.joinCode, removedPlayerId);
+  const f = room.fragment;
+  if (!f || !f.guessingStarted || f.revealed) return;
+
+  const triggered = finishFragmentGuessingIfAllDone(room);
+  if (!triggered) return;
+
+  clearAllPlayerGuessTimersForRoom(room.joinCode);
+  io.to(room.joinCode).emit('fragment:reveal', {
+    teams: f.teams.map((t) => ({
+      teamId: t.id,
+      word: t.word,
+      memberIds: t.playerIds,
+      memberNames: t.playerIds.map((id) => room.players.get(id)?.displayName ?? '離線玩家') as [string, string],
+      splitOrientation: t.splitOrientation,
+      keptHalf: t.keptHalf ?? 'a',
+      keptStrokes: t.keptStrokes,
+      completedStrokes: t.secondDrawerStrokes,
+      guesses: Array.from(t.guesses.entries()).map(([guesserId, g]) => ({
+        guesserId,
+        guesserDisplayName: g.displayName,
+        text: g.text,
+      })),
+    })),
+  });
+  room.status = 'finished';
+  io.to(room.joinCode).emit('room:state', toRoomSummary(room));
+  io.to(room.joinCode).emit('game:finished', { nextMatchInSec: null });
 }

@@ -122,17 +122,20 @@ export interface FragmentTeamSummary {
 export interface FragmentSummary {
   teams: FragmentTeamSummary[];
   /**
-   * 猜題階段：目前正在公布、讓外組玩家猜的是哪一組（依 teams 陣列順序，
-   * 一組一組來，見使用者需求「輪流給其他組的所有人分別猜測」）。
-   * null 代表猜題階段還沒開始（所有組都還在畫，或已經全部結束、進入 revealed）。
+   * 猜題階段是否已經開始（所有組別都畫完了才會是 true）。使用者明確要求
+   * 這個階段不要「一組一組公布、大家要互相等」，改成「每個人各自依自己的
+   * 節奏往下猜，猜完自己該猜的所有組別後才等其他人」——所以這裡不會有
+   * 「目前公布到第幾組」這種全房間共用的單一進度指標，每個人現在該猜哪一組
+   * 是透過私訊（fragment:guessPhase）各自單獨通知的，不會放進這個公開摘要。
    */
-  activeGuessTeamId: string | null;
-  /** 猜題階段這一組作品公布的時間戳，理由同上，讓大家算出同步倒數 */
-  guessPhaseStartedAt: number | null;
-  /** 猜題階段：這一組作品目前已經送出猜測的（外組）玩家 id */
-  guessedPlayerIds: string[];
-  /** 猜題階段還剩幾組作品沒公布過（含目前正在猜的這組），全部猜完才會進入 revealed */
-  remainingGuessTeams: number;
+  guessingStarted: boolean;
+  /**
+   * 猜題階段：還有幾位「目前連線中」的玩家還沒把該猜的組別全部猜完（不含
+   * 猜題階段開始前就已經離開的人）。給畫面顯示「還有 X 人在猜」這種整體
+   * 進度用，不是每個人自己的猜題進度（那個透過私訊 fragment:guessPhase
+   * 各自單獨通知）。猜題階段還沒開始、或已經進入 revealed 時固定是 0。
+   */
+  playersStillGuessingCount: number;
   /** 只有進入公布階段才非 null */
   reveal: FragmentReveal | null;
   /** 公布階段的「準備好下一場」投票名單，跟 TelephoneSummary.readyForNextRoundIds
