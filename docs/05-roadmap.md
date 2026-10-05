@@ -893,3 +893,11 @@
 - 推測根因（未能在 WebKit 實測）：畫布外框高度來自 `aspect-ratio: 3/2` 再被 `min-height: 420px` 撐高；WebKit 讓子層 `height:100%` 只解析成 aspect-ratio 算出的較矮高度（寬 345px 約 230px），畫布與切割線因此只佔外框一部分。Chromium 不會發生，沙盒無法重現。
 - 修法：`FragmentCanvas`、`StrokeReplay` 外層改為 `position:absolute; inset:0` 填滿父層，不再依賴百分比高度；`.rm-sheet` 補上 `position:relative`。
 - 驗證：Chromium 於 390／360 寬度量測畫布與外框一致；三種模式 socket 回歸通過。**iOS Safari 需實機確認。**
+
+
+## 首頁滑到最底部突然跳出登入視窗
+- 根因：首頁頁尾的 `<Link href="/admin">` 在正式環境進入視窗時，Next.js 會自動預取目標頁；`/admin` 受 Basic Auth 保護（`proxy.ts`），預取請求沒帶帳密，收到 401 與 `WWW-Authenticate`，瀏覽器因此彈出登入視窗。
+- 重現：以無頭 Chromium 載入首頁並滑到底，觀察到一筆 `401 /admin?_rsc=…`（RSC prefetch）。
+- 修法：該連結加上 `prefetch={false}`，只有使用者真的點擊才請求。其餘 `<Link>` 都指向公開頁面（`/`、`/online`），無同類風險。
+- 驗證：修正後同樣操作，對 `/admin` 的請求為零。
+- 日後新增指向受保護頁面的連結都要加 `prefetch={false}`。

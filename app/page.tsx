@@ -238,7 +238,12 @@ export default function Home() {
 
       <footer className="hm-wrap hm-foot">
         <span>畫圖猜謎派對 · 手機與電腦皆可遊玩</span>
-        <Link href="/admin">題庫管理</Link>
+        {/* prefetch={false}：/admin 受 Basic Auth 保護（見 proxy.ts）。Next.js 預設會在連結進入
+            視窗時自動預取目標頁，預取請求沒帶帳密會收到 401，瀏覽器因此在使用者滑到頁尾時
+            突然彈出登入視窗。只有使用者真的點擊才應該請求這個頁面。 */}
+        <Link href="/admin" prefetch={false}>
+          題庫管理
+        </Link>
       </footer>
     </>
   );
