@@ -887,3 +887,9 @@
 - 無障礙：焦點環、skip link、`aria-pressed`、`role=progressbar`/`tablist`、錯誤 `role=alert` 並聚焦欄位、觸控目標 44px、減少動態與無 JS 下內容完整。
 - 驗證：`tsc`／`eslint`／`next build` 通過；以無頭 Chromium 實際截圖（桌機 1440、平板 768、手機 390）逐頁檢視；三種模式 socket 回歸測試通過；自動化檢查無橫向溢出、無 JS 錯誤。
 - 已知限制：沙盒無法連 Google Fonts／真機，未測真實手機觸控手感與實體裝置字型渲染；首頁畫板在觸控裝置採 `touch-action:none`，畫板範圍內無法以該區域捲動頁面。
+
+## iPhone Safari：拼圖接畫畫布與切割線只佔外框一部分
+- 現象（使用者 iPhone 截圖）：水平切割時，虛線落在畫布約 1/3 高度而非正中間，灰色保留區比實際小。
+- 推測根因（未能在 WebKit 實測）：畫布外框高度來自 `aspect-ratio: 3/2` 再被 `min-height: 420px` 撐高；WebKit 讓子層 `height:100%` 只解析成 aspect-ratio 算出的較矮高度（寬 345px 約 230px），畫布與切割線因此只佔外框一部分。Chromium 不會發生，沙盒無法重現。
+- 修法：`FragmentCanvas`、`StrokeReplay` 外層改為 `position:absolute; inset:0` 填滿父層，不再依賴百分比高度；`.rm-sheet` 補上 `position:relative`。
+- 驗證：Chromium 於 390／360 寬度量測畫布與外框一致；三種模式 socket 回歸通過。**iOS Safari 需實機確認。**

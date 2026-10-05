@@ -37,8 +37,12 @@ export const FragmentCanvas = forwardRef<DrawingCanvasHandle, FragmentCanvasProp
   const isVertical = splitOrientation === 'vertical';
   const allowedRegion = keptHalf ? { orientation: splitOrientation, half: keptHalf === 'a' ? ('b' as const) : ('a' as const) } : undefined;
 
+  // 外層用 absolute + inset:0 填滿父層，不用 height:100%：父層高度來自 aspect-ratio 再被
+  // min-height 撐高時，iOS Safari（WebKit）會讓 height:100% 只吃到 aspect-ratio 算出的較矮
+  // 高度，畫布與切割線因此只佔外框一部分（虛線落在約 1/3 處而非正中間），補全者可畫的
+  // 範圍與畫面對不上。父層（.rm-sheet）需為 position:relative。
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', background: '#ffffff' }}>
+    <div style={{ position: 'absolute', inset: 0, background: '#ffffff' }}>
       {keptStrokes && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           <StrokeReplay strokes={keptStrokes} />

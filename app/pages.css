@@ -1540,6 +1540,7 @@
 
 /* ---- 畫布「紙張」外框：與 DRAW_GUESS 畫布同一套框線與硬陰影 ---- */
 .rm-sheet {
+  position: relative;
   background: #fff;
   border: 3px solid var(--ink);
   border-radius: var(--r-card-2);

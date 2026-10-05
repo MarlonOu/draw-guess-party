@@ -108,7 +108,7 @@ export function StrokeReplay({ strokes, emptyLabel }: StrokeReplayProps) {
   const isEmpty = strokes.every((s) => s.points.length < 2);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={{ position: 'absolute', inset: 0 }}>
       <canvas
         ref={canvasRef}
         // 只負責定位，不負責尺寸——尺寸完全交給上面 useLayoutEffect 的 render()
