@@ -45,31 +45,19 @@ export function GuessChatBox({ messages, onSend, disabled = false, maxHeight = 3
 
   return (
     <div
-      className="dg-card"
-      style={{ display: 'flex', flexDirection: 'column', height: maxHeight, overflow: 'hidden' }}
+      className="dg-card rm-chat"
+      style={{ height: maxHeight }}
     >
-      <div ref={listRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
-        {messages.length === 0 && (
-          <p style={{ color: 'var(--ink-soft)', fontSize: 13 }}>還沒有人發言，搶頭香吧</p>
-        )}
+      <div ref={listRef} onScroll={handleScroll} className="rm-chat-list" role="log" aria-live="polite" aria-label="猜題聊天室訊息">
+        {messages.length === 0 && <p className="rm-chat-empty">還沒有人發言，搶頭香吧</p>}
         {messages.map((m) => (
-          <div
-            key={m.id}
-            style={{
-              padding: '6px 8px',
-              borderRadius: 8,
-              marginBottom: 4,
-              background: m.isCorrectGuess ? 'var(--green-soft)' : 'transparent',
-              color: m.isCorrectGuess ? 'var(--green)' : 'var(--ink)',
-              fontWeight: m.isCorrectGuess ? 800 : 400,
-            }}
-          >
-            <span style={{ color: 'var(--ink-soft)', fontWeight: 700 }}>{m.displayName}：</span>
-            {m.isCorrectGuess ? '猜對了！' : m.text}
+          <div key={m.id} className={`rm-msg${m.isCorrectGuess ? ' is-correct' : ''}`}>
+            <span className="rm-msg-who">{m.displayName}</span>
+            <span className="rm-msg-text">{m.isCorrectGuess ? '猜對了！' : m.text}</span>
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8, padding: 10, borderTop: '2px solid var(--ink)' }}>
+      <div className="rm-chat-form">
         <input
           type="text"
           value={value}
@@ -88,7 +76,7 @@ export function GuessChatBox({ messages, onSend, disabled = false, maxHeight = 3
           }}
           placeholder={disabled ? '輪到你畫圖，不能發言' : '輸入猜題或聊天內容'}
           className="dg-input"
-          style={{ flex: 1, padding: '8px 12px', opacity: disabled ? 0.5 : 1 }}
+          style={{ flex: 1 }}
         />
         <button
           type="button"

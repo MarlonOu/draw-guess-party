@@ -26,17 +26,12 @@ const DIFFICULTIES: { value: string; label: string }[] = [
 ];
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--ink-soft)', marginBottom: 4 }}>
-      {children}
-    </p>
-  );
+  return <p className="dg-label rm-set-label">{children}</p>;
 }
 
 function Chip({
   active,
   onClick,
-  compact,
   children,
 }: {
   active: boolean;
@@ -44,20 +39,9 @@ function Chip({
   compact?: boolean;
   children: React.ReactNode;
 }) {
+  // 用 aria-pressed 表達開關狀態（不只靠顏色），尺寸沿用全站晶片的 44px 觸控高度
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="dg-tag"
-      style={{
-        cursor: 'pointer',
-        background: active ? 'var(--accent)' : 'var(--paper)',
-        color: active ? 'var(--paper)' : 'var(--ink)',
-        whiteSpace: 'nowrap',
-        padding: compact ? '2px 8px' : undefined,
-        fontSize: compact ? 12 : undefined,
-      }}
-    >
+    <button type="button" onClick={onClick} className="dg-chip dg-chip-sm" aria-pressed={active}>
       {children}
     </button>
   );
@@ -117,23 +101,12 @@ export function RoomSettingsPanel({
 
   return (
     <div
-      className="dg-card"
-      style={{
-        width: '100%',
-        maxWidth: 340,
-        boxShadow: 'none',
-        padding: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        alignItems: 'flex-start',
-        textAlign: 'left',
-      }}
+      className="dg-card rm-settings"
     >
       {showTelephoneFlow && (
         <div style={{ width: '100%' }}>
           <SectionLabel>接龍流程</SectionLabel>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          <div className="rm-set-chips">
             <Chip
               active={(settings.telephoneFlow ?? 'combined') === 'combined'}
               onClick={() => onUpdate({ telephoneFlow: 'combined' })}
@@ -155,7 +128,7 @@ export function RoomSettingsPanel({
       {showRoundDuration && (
         <div style={{ width: '100%' }}>
           <SectionLabel>每輪秒數</SectionLabel>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          <div className="rm-set-chips">
             {ROUND_DURATIONS.map((sec) => (
               <Chip key={sec} active={settings.roundDurationSec === sec} onClick={() => onUpdate({ roundDurationSec: sec })} compact>
                 {sec}s
@@ -168,16 +141,7 @@ export function RoomSettingsPanel({
       {categories.length > 0 && (
         <div style={{ width: '100%' }}>
           <SectionLabel>分類篩選（不選代表全部）</SectionLabel>
-          <div
-            style={{
-              display: 'flex',
-              gap: 4,
-              flexWrap: 'wrap',
-              maxHeight: 64,
-              overflowY: 'auto',
-              paddingRight: 4,
-            }}
-          >
+          <div className="rm-set-chips rm-set-scroll">
             {categories.map((cat) => (
               <Chip key={cat} active={settings.categoryFilter.includes(cat)} onClick={() => toggleCategory(cat)} compact>
                 {cat}
@@ -189,7 +153,7 @@ export function RoomSettingsPanel({
 
       <div style={{ width: '100%' }}>
         <SectionLabel>難度</SectionLabel>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        <div className="rm-set-chips">
           {DIFFICULTIES.map((d) => (
             <Chip key={d.value} active={settings.difficultyFilter.includes(d.value)} onClick={() => toggleDifficulty(d.value)} compact>
               {d.label}

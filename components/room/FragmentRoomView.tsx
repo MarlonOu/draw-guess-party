@@ -9,8 +9,7 @@ import type { DrawingCanvasHandle } from '../canvas/DrawingCanvas';
 import { Toolbar } from '../canvas/Toolbar';
 import { PlayerList } from './PlayerList';
 import { BackButton } from '../nav/BackButton';
-import { CopyButton } from './CopyButton';
-import { QrCodeButton } from './QrCodeButton';
+import { RoomTicket } from './RoomTicket';
 import { StatusOverlay } from './StatusOverlay';
 import { RoomSettingsPanel } from './RoomSettingsPanel';
 import { SoundToggleButton } from './SoundToggleButton';
@@ -219,8 +218,8 @@ export function FragmentRoomView({
   };
 
   return (
-    <main
-      className="dg-page dg-fragment-page"
+    <main id="main"
+      className={isRevealing ? 'dg-page dg-fragment-page rm-reveal' : `dg-page dg-fragment-page rm-page rm-page-wide${room.status === 'lobby' ? ' rm-lobby' : ''}`}
       style={{
         maxWidth: 1400,
         margin: '0 auto',
@@ -278,32 +277,10 @@ export function FragmentRoomView({
         // <main> 裡確實置中，不會整個貼齊左邊、右側留下一大塊不對稱的空白。
         <div className="dg-canvas-frame" style={{ margin: '6px auto 0' }}>
           <StatusOverlay standalone icon="clock" iconColor="var(--blue)" title="遊戲尚未開始">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
-                  房間代碼 <strong style={{ color: 'var(--ink)' }}>{room.joinCode}</strong>
-                </span>
-                <CopyButton value={room.joinCode} label="複製房間代碼" />
-              </div>
-              {pageUrl && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--ink-soft)',
-                      maxWidth: 200,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {pageUrl}
-                  </span>
-                  <CopyButton value={pageUrl} label="複製邀請連結" />
-                  <QrCodeButton value={pageUrl} label="顯示邀請連結的 QR code" />
-                </div>
-              )}
-              <p style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'center', maxWidth: 320 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center', width: '100%' }}>
+              <RoomTicket joinCode={room.joinCode} url={pageUrl} />
+              
+              <p style={{ fontSize: 13.5, color: 'var(--ink-soft)', textAlign: 'center', maxWidth: 320 }}>
                 兩人一組，一組畫一組猜；至少要 {FRAGMENT_MIN_PLAYERS} 人、且人數為偶數才能開始
               </p>
             </div>
@@ -334,7 +311,7 @@ export function FragmentRoomView({
 
               return (
                 <div style={{ width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <p style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'center' }}>
+                  <p style={{ fontSize: 13.5, color: 'var(--ink-soft)', textAlign: 'center' }}>
                     點「加入」把自己移到那一組；每組必須剛好 2 人才能開始遊戲
                   </p>
                   {Array.from({ length: slotCount }).map((_, teamNumber) => {
@@ -387,8 +364,8 @@ export function FragmentRoomView({
                           title={iAmHere ? '你已經在這一組了' : `加入第 ${teamNumber + 1} 組`}
                           className="dg-btn"
                           style={{
-                            width: 28,
-                            height: 28,
+                            width: 44,
+                            height: 44,
                             padding: 0,
                             display: 'flex',
                             alignItems: 'center',
@@ -525,7 +502,7 @@ function FragmentDrawingSection({
     return (
       <div className="dg-fragment-canvas-frame" style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span className="dg-tag" style={{ background: 'var(--accent)', color: '#fff' }}>
+          <span className="dg-tag" style={{ background: 'var(--accent)' }}>
             題目：{yourTurn.word}
           </span>
           {isFirst && (
@@ -559,7 +536,7 @@ function FragmentDrawingSection({
           forceLayout="mobile"
         />
 
-        <div style={{ width: '100%', aspectRatio: '3 / 2', minHeight: 420 }}>
+        <div className="rm-sheet" style={{ width: '100%', aspectRatio: '3 / 2', minHeight: 420 }}>
           <FragmentCanvas
             ref={canvasHandleRef}
             color={color}
@@ -589,7 +566,7 @@ function FragmentDrawingSection({
         <p style={{ fontSize: 13, color: 'var(--ink-soft)', textAlign: 'center' }}>
           隊友正在補全你的畫作，即時看看他畫得怎麼樣
         </p>
-        <div style={{ width: '100%', aspectRatio: '3 / 2', minHeight: 420 }}>
+        <div className="rm-sheet" style={{ width: '100%', aspectRatio: '3 / 2', minHeight: 420 }}>
           <FragmentCanvas
             color={color}
             width={width}
@@ -650,7 +627,7 @@ function FragmentGuessSection({
   const combinedStrokes = [...guessPhase.keptStrokes, ...guessPhase.completedStrokes];
   return (
     <div className="dg-fragment-canvas-frame" style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ fontSize: 14, fontWeight: 800, textAlign: 'center' }}>這一組畫的是什麼？</p>
+      <p className="rm-ask">這一組畫的是什麼？</p>
       <div
         style={{
           width: '100%',
@@ -728,17 +705,8 @@ function FragmentRevealSection({ reveal, room, myPlayerId, voteReadyForNextRound
 
   return (
     <div style={{ marginTop: 6, width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: 16,
-          maxHeight: '75vh',
-          overflowY: 'auto',
-          padding: 4,
-        }}
-      >
-        {reveal.teams.map((t) => {
+      <div className="rm-reveal-grid"      >
+        {reveal.teams.map((t, teamIdx) => {
           const combinedStrokes = [...t.keptStrokes, ...t.completedStrokes];
           // 猜測列表依「猜測者所屬的組別」在 reveal.teams 裡的順序排列（不是
           // 依送出先後），比較容易一眼看出「第2組的人猜了什麼、第3組的人猜了
@@ -752,7 +720,11 @@ function FragmentRevealSection({ reveal, room, myPlayerId, voteReadyForNextRound
             (a, b) => (teamIndexOfPlayer.get(a.guesserId) ?? 0) - (teamIndexOfPlayer.get(b.guesserId) ?? 0)
           );
           return (
-            <div key={t.teamId} className="dg-card" style={{ padding: 12 }}>
+            <div
+              key={t.teamId}
+              className="dg-card dg-taped rm-reveal-card"
+              style={{ ['--i' as string]: teamIdx, ['--tilt' as string]: `${teamIdx % 2 === 0 ? -0.8 : 0.9}deg`, ['--tape-tilt' as string]: `${teamIdx % 2 === 0 ? -3 : 4}deg` }}
+            >
               <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 6, textAlign: 'center' }}>
                 {t.memberNames[0]} ＋ {t.memberNames[1]}：{t.word}
               </p>

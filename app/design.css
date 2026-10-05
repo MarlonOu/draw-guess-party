@@ -1,0 +1,708 @@
+/* =============================================================================
+ * 畫圖猜謎派對 · 設計系統「素描本派對桌」
+ *
+ * 概念：整站是一張攤開的素描本——暖米紙、墨線、麥克筆色、膠帶與便利貼。
+ * 三種玩法是「貼上去的卡片」，每個房間是一張「入場券」。
+ *
+ * 規則：
+ *  1. 實色偏移陰影（不用模糊陰影），按下時「壓進紙裡」。
+ *  2. 圓角略不對稱（手剪感），但容器內的文字永遠水平、不旋轉。
+ *  3. 鮮豔色塊上一律用墨色字（白字配珊瑚橘只有約 2.9:1，不合格）。
+ *  4. 動效分三層：進場（ease-out 長）、互動回饋（spring 短）、裝飾（極少、可關）。
+ *  5. prefers-reduced-motion 的全域規則放在 globals.css（一併涵蓋所有動畫）。
+ *
+ * 舊版 token 名稱（--ink / --paper / --accent / --blue …）全部保留並重新賦值，
+ * 三種遊戲模式的房間畫面大量使用這些名稱，沿用名稱才能自動繼承新外觀。
+ * ========================================================================== */
+
+:root {
+  /* ---- 紙與墨 ---- */
+  --canvas: #f7f0e1;          /* 頁面底：暖米紙 */
+  --paper: #fffdf8;           /* 卡片/表面 */
+  --paper-dim: #faf4e6;
+  --line: #e4d9c0;            /* 格點、細線 */
+  --ink: #1b1a2e;             /* 主要文字與描邊 */
+  --ink-soft: #4c4a63;        /* 次要文字（對 canvas 約 7.5:1） */
+  --ink-faint: #8b879f;       /* 僅限裝飾，不可用於文字 */
+
+  /* ---- 麥克筆色（每色附 -ink 文字版與 -soft 底色版） ---- */
+  --accent: #ff6b4a;          /* 珊瑚橘：主色 */
+  --accent-ink: #b5391d;
+  --accent-soft: #ffddd1;
+  --blue: #4c6fff;
+  --blue-ink: #2a45c7;        /* 白字對它約 7.5:1 */
+  --blue-soft: #dee5ff;
+  --green: #1fcb8f;
+  --green-ink: #0b7552;
+  --green-soft: #d4f6e8;
+  --amber: #ffc93c;
+  --amber-ink: #7a5200;
+  --amber-soft: #ffefc0;
+  --pink: #ff8db5;
+  --pink-soft: #ffddea;
+  --grape: #8a5cf5;
+  --grape-soft: #e9dfff;
+  --red: #e5383b;
+  --red-soft: #ffdadb;
+
+  /* ---- 陰影：實色偏移 ---- */
+  --shadow-sm: 3px 3px 0 var(--ink);
+  --shadow-md: 5px 5px 0 var(--ink);
+  --shadow-lg: 8px 8px 0 var(--ink);
+  --shadow-press: 1px 1px 0 var(--ink);
+
+  /* ---- 形狀：略不對稱的手剪圓角 ---- */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --r-card: 18px 22px 17px 24px / 22px 17px 24px 18px;
+  --r-card-2: 24px 17px 22px 18px / 17px 24px 18px 22px;
+  --r-btn: 12px 14px 11px 15px / 14px 11px 15px 12px;
+
+  /* ---- 字型 ---- */
+  --font-display:
+    'Fredoka Variable', 'Chiron GoRound TC Variable', 'PingFang TC', 'Noto Sans TC',
+    'Microsoft JhengHei', system-ui, sans-serif;
+  --font-body:
+    'Fredoka Variable', 'Chiron GoRound TC Variable', 'PingFang TC', 'Noto Sans TC',
+    'Microsoft JhengHei', system-ui, sans-serif;
+  --font-hand: 'Iansui', 'Chiron GoRound TC Variable', 'PingFang TC', 'Noto Sans TC', cursive;
+  --font-sans: var(--font-body); /* 舊名稱相容 */
+
+  /* ---- 字級（流體） ---- */
+  --fs-hero: clamp(4.2rem, 8vw + 1.2rem, 8.75rem);
+  --fs-h1: clamp(2rem, 4.6vw, 3.5rem);
+  --fs-h2: clamp(1.6rem, 3.4vw, 2.5rem);
+  --fs-h3: 1.25rem;
+
+  /* ---- 間距（4pt 基準） ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 72px;
+  --s-9: 112px;
+
+  /* ---- 動效 ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 420ms;
+  --dur-4: 700ms;
+
+  --tape: rgba(255, 201, 60, 0.82);
+}
+
+/* ---------------------------------------------------------------- 基礎 --- */
+
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  scroll-padding-top: 16px;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  background-color: var(--canvas);
+  /* 疊兩層：細紙紋（靜態 SVG 雜訊，不用混合模式，捲動零成本）＋格點 */
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .45 0 0 0 0 .32 0 0 0 0 .18 0 0 0 .1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    radial-gradient(var(--line) 1.3px, transparent 1.6px);
+  background-size: 220px 220px, 26px 26px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.65;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+::selection {
+  background: var(--amber);
+  color: var(--ink);
+}
+
+/* 焦點環：雙層（紙色間隔＋藍色外環），在任何底色上都看得見 */
+:focus-visible {
+  outline: 3px solid var(--blue-ink);
+  outline-offset: 3px;
+}
+
+.dg-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dg-skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 200;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 800;
+  border-radius: var(--r-btn);
+  transform: translateY(-160%);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.dg-skip:focus-visible {
+  transform: translateY(0);
+}
+
+/* ------------------------------------------------------------- 文字輔助 --- */
+
+.dg-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-hand);
+  font-size: 1.2rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--accent-ink);
+}
+
+.nw {
+  white-space: nowrap;
+}
+
+.dg-hand {
+  font-family: var(--font-hand);
+  font-weight: 400;
+}
+
+.dg-lead {
+  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+/* -------------------------------------------------------------- 卡片 ----- */
+
+.dg-card {
+  position: relative;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-md);
+}
+
+/* 膠帶：貼在卡片上緣的半透明黃紙膠帶 */
+.dg-taped::before {
+  content: '';
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 92px;
+  height: 26px;
+  margin-left: -46px;
+  background: var(--tape);
+  border-left: 2px dashed rgba(27, 26, 46, 0.18);
+  border-right: 2px dashed rgba(27, 26, 46, 0.18);
+  transform: rotate(var(--tape-tilt, -3deg));
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ------------------------------------------------------------- 按鈕 ------ */
+
+.dg-btn {
+  --btn-bg: var(--paper);
+  --btn-fg: var(--ink);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 1.15rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
+  border: 2px solid var(--ink);
+  border-radius: var(--r-btn);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform var(--dur-2) var(--ease-spring),
+    box-shadow var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .dg-btn:hover:not(:disabled) {
+    transform: translate(-2px, -2px) rotate(-0.5deg);
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+}
+
+.dg-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-press);
+  transition-duration: 60ms;
+}
+
+.dg-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: var(--shadow-sm);
+}
+
+.dg-btn-primary {
+  --btn-bg: var(--accent);
+}
+.dg-btn-blue {
+  --btn-bg: var(--blue-ink);
+  --btn-fg: #fff;
+}
+.dg-btn-mint {
+  --btn-bg: var(--green);
+}
+.dg-btn-sun {
+  --btn-bg: var(--amber);
+}
+.dg-btn-ink {
+  --btn-bg: var(--ink);
+  --btn-fg: var(--paper);
+  box-shadow: 3px 3px 0 var(--accent);
+}
+.dg-btn-ghost {
+  --btn-bg: var(--paper);
+}
+.dg-btn-lg {
+  min-height: 56px;
+  padding: 0.85rem 1.6rem;
+  font-size: 1.1rem;
+}
+.dg-btn-sm {
+  min-height: 44px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+}
+.dg-btn-block {
+  width: 100%;
+}
+
+/* 方向箭頭等微圖示：按鈕 hover 時往前推一點 */
+.dg-btn .dg-arrow {
+  transition: transform var(--dur-2) var(--ease-spring);
+}
+@media (hover: hover) {
+  .dg-btn:hover:not(:disabled) .dg-arrow {
+    transform: translateX(4px);
+  }
+}
+
+/* -------------------------------------------------------------- 表單 ----- */
+
+.dg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dg-label {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.dg-hint {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.dg-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.7rem 0.95rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--r-btn);
+  box-shadow: inset 0 2px 0 rgba(27, 26, 46, 0.06);
+  transition:
+    box-shadow var(--dur-2) var(--ease-out),
+    border-color var(--dur-2),
+    transform var(--dur-2) var(--ease-spring);
+}
+
+.dg-input::placeholder {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
+.dg-input:focus-visible {
+  outline: none;
+  border-color: var(--blue-ink);
+  box-shadow: 4px 4px 0 var(--blue-ink);
+  transform: translate(-2px, -2px);
+}
+
+.dg-input:disabled {
+  background: var(--paper-dim);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------- 標籤 / 可選晶片 ----- */
+
+.dg-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 28px;
+  padding: 0.15rem 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+}
+
+/* 可選晶片（分類、難度、時間）：用 aria-pressed 表達狀態，而不是只靠顏色 */
+.dg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.35rem 1rem;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform var(--dur-2) var(--ease-spring),
+    box-shadow var(--dur-2) var(--ease-out),
+    background-color var(--dur-2);
+}
+
+@media (hover: hover) {
+  .dg-chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 0 var(--ink);
+  }
+}
+
+.dg-chip[aria-pressed='true'] {
+  background: var(--accent);
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: translate(-1px, -1px) rotate(-1deg);
+}
+
+.dg-chip[aria-pressed='true']::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.3rem;
+  margin-top: -0.12rem;
+  border-left: 2.5px solid var(--ink);
+  border-bottom: 2.5px solid var(--ink);
+  transform: rotate(-45deg);
+}
+
+/* 貼紙：微旋轉的實色小標籤，用在強調性短語 */
+.dg-sticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.85rem;
+  font-family: var(--font-hand);
+  font-size: 1rem;
+  background: var(--amber);
+  border: 2px solid var(--ink);
+  border-radius: var(--r-btn);
+  box-shadow: var(--shadow-sm);
+  transform: rotate(var(--tilt, -3deg));
+}
+
+/* 說明便條（玩法說明等長文字用） */
+.dg-note {
+  padding: 0.9rem 1.1rem;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--amber-soft);
+  border: 2px dashed var(--ink);
+  border-radius: var(--r-card-2);
+}
+
+/* 訊息框（錯誤等） */
+.dg-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  background: var(--red-soft);
+  border: 2px solid var(--ink);
+  border-radius: var(--r-card-2);
+  animation: dg-shake var(--dur-4) var(--ease-out) both;
+}
+
+/* ------------------------------------------------------------ 動畫 ------- */
+
+@keyframes dg-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotate(var(--rise-tilt, 0deg));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dg-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) rotate(var(--pop-tilt, -6deg));
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.06) rotate(var(--pop-tilt, -6deg));
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(var(--pop-tilt, -6deg));
+  }
+}
+
+@keyframes dg-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes dg-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  18% {
+    transform: translateX(-7px) rotate(-0.6deg);
+  }
+  36% {
+    transform: translateX(6px) rotate(0.5deg);
+  }
+  54% {
+    transform: translateX(-4px);
+  }
+  72% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes dg-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--float-tilt, 0deg));
+  }
+  50% {
+    transform: translateY(-9px) rotate(calc(var(--float-tilt, 0deg) * -1));
+  }
+}
+
+@keyframes dg-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes dg-wiggle {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+
+/* 進場：以 --i 控制階梯延遲，不需要 JS */
+.dg-in {
+  animation: dg-rise var(--dur-4) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+/* 捲動進場：JS 掛載後才加上 .rv-armed，SSR 與無 JS 時內容一律可見 */
+.rv-armed {
+  transition:
+    opacity var(--dur-4) var(--ease-out),
+    transform var(--dur-4) var(--ease-out);
+  transition-delay: calc(var(--d, 0) * 90ms);
+}
+.rv-armed:not(.is-in) {
+  opacity: 0;
+  transform: translateY(32px);
+}
+
+/* ---------------------------------------------------- 分段控制（頁籤） ----- */
+
+.dg-seg {
+  --n: 2;
+  --idx: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  padding: 4px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dg-seg-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--n));
+  background: var(--accent);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  transform: translateX(calc(var(--idx) * 100%));
+  transition: transform var(--dur-3) var(--ease-spring);
+}
+
+.dg-seg > button {
+  position: relative;
+  z-index: 1;
+  min-height: 44px;
+  padding: 0 1rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dg-seg > button[aria-selected='false'] {
+  color: var(--ink-soft);
+}
+
+.dg-chip-sm {
+  min-height: 44px;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+input[type='range'] {
+  accent-color: var(--accent);
+}
+
+/* ---- 原生 select / textarea / table 套同一套紙感外觀（題庫管理頁用） ---- */
+select,
+textarea {
+  min-height: 44px;
+  padding: 0.55rem 0.8rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--r-btn);
+}
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--blue-ink);
+  box-shadow: 4px 4px 0 var(--blue-ink);
+}
+table {
+  border-collapse: collapse;
+}
+th {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+td,
+th {
+  border-bottom: 2px dashed var(--line);
+}
+
+.dg-btn {
+  white-space: nowrap;
+}

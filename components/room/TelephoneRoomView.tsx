@@ -8,8 +8,7 @@ import { Toolbar } from '../canvas/Toolbar';
 import { StrokeReplay } from '../canvas/StrokeReplay';
 import { PlayerList } from './PlayerList';
 import { BackButton } from '../nav/BackButton';
-import { CopyButton } from './CopyButton';
-import { QrCodeButton } from './QrCodeButton';
+import { RoomTicket } from './RoomTicket';
 import { StatusOverlay } from './StatusOverlay';
 import { RoomSettingsPanel } from './RoomSettingsPanel';
 import { SoundToggleButton } from './SoundToggleButton';
@@ -132,8 +131,8 @@ export function TelephoneRoomView({
     !isRevealing && room.status === 'playing' && isMyTurn && yourTurn?.subPhase === 'drawing';
 
   return (
-    <main
-      className="dg-page"
+    <main id="main"
+      className={isRevealing ? 'dg-page' : `dg-page rm-page${room.status === 'lobby' ? ' rm-lobby' : ''}`}
       style={{
         maxWidth: 1400,
         margin: '0 auto',
@@ -191,18 +190,20 @@ export function TelephoneRoomView({
         // 裡的區塊，寬度單純由 width:'100%' 決定，不受任何 flex 相關規則影響，
         // 徹底排除疑慮。
         <div style={{ marginTop: 6, width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="dg-card" style={{ padding: 16, textAlign: 'center' }}>
-            <p style={{ fontSize: 16, fontWeight: 900 }}>原始題目：{reveal.originalWord}</p>
+          <div className="rm-origin">
+            <span className="dg-hand">原始題目</span>
+            <strong>{reveal.originalWord}</strong>
           </div>
 
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-              gap: 16,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 340px))',
+              justifyContent: 'center',
+              gap: 20,
               maxHeight: '75vh',
               overflowY: 'auto',
-              padding: 4,
+              padding: '8px 8px 12px',
             }}
           >
             {reveal.entries.map((entry, i) => {
@@ -336,18 +337,20 @@ export function TelephoneRoomView({
           })()}
         </div>
       ) : (
-        <div className="dg-canvas-row" style={{ marginTop: 6, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'stretch' }}>
+        <div className="dg-canvas-row" style={{ marginTop: 6, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'stretch', justifyContent: room.status === 'lobby' ? 'center' : undefined }}>
+          {room.status !== 'lobby' && (
           <Toolbar
-            color={color}
-            width={width}
-            tool={tool}
-            onColorChange={setColor}
-            onWidthChange={setWidth}
-            onToolChange={setTool}
-            onUndo={() => canvasHandleRef.current?.undo()}
-            onClear={() => canvasHandleRef.current?.clear()}
-            disabled={!isDrawingSubphase}
-          />
+              color={color}
+              width={width}
+              tool={tool}
+              onColorChange={setColor}
+              onWidthChange={setWidth}
+              onToolChange={setTool}
+              onUndo={() => canvasHandleRef.current?.undo()}
+              onClear={() => canvasHandleRef.current?.clear()}
+              disabled={!isDrawingSubphase}
+            />
+          )}
 
           {room.status === 'lobby' ? (
           // lobby 疊層內容量遠比其他狀態多（房間代碼、邀請連結、分類/難度篩選、
@@ -356,31 +359,9 @@ export function TelephoneRoomView({
           // 不再受畫布尺寸限制——跟 DRAW_GUESS 房間頁面同一套處理方式。
           <div className="dg-canvas-frame">
             <StatusOverlay standalone icon="clock" iconColor="var(--blue)" title="遊戲尚未開始">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
-                    房間代碼 <strong style={{ color: 'var(--ink)' }}>{room.joinCode}</strong>
-                  </span>
-                  <CopyButton value={room.joinCode} label="複製房間代碼" />
-                </div>
-                {pageUrl && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--ink-soft)',
-                        maxWidth: 200,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {pageUrl}
-                    </span>
-                    <CopyButton value={pageUrl} label="複製邀請連結" />
-                    <QrCodeButton value={pageUrl} label="顯示邀請連結的 QR code" />
-                  </div>
-                )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center', width: '100%' }}>
+                <RoomTicket joinCode={room.joinCode} url={pageUrl} />
+                
               </div>
 
               <RoomSettingsPanel
@@ -485,7 +466,7 @@ export function TelephoneRoomView({
                 >
                   <span
                     className="dg-tag"
-                    style={{ background: 'var(--accent)', color: '#fff', pointerEvents: 'auto' }}
+                    style={{ background: 'var(--accent)', pointerEvents: 'auto' }}
                   >
                     請畫：{yourTurn.promptText}
                   </span>

@@ -113,7 +113,7 @@ function ColorSwatch({
         borderRadius: '50%',
         background: c,
         border: '2px solid var(--ink)',
-        boxShadow: active ? '0 0 0 2px var(--blue)' : 'none',
+        boxShadow: active ? '0 0 0 2px var(--paper), 0 0 0 4px var(--ink)' : 'none',
         transform: active ? 'scale(1.12)' : `rotate(${(i % 3) - 1}deg)`,
         cursor: 'pointer',
         transition: 'transform 0.1s ease',

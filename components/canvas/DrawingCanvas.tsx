@@ -270,7 +270,24 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       };
       resize();
       window.addEventListener('resize', resize);
-      return () => window.removeEventListener('resize', resize);
+      // 只聽視窗縮放不夠：大廳 → 遊戲時欄寬會改變、工具列版面也可能變動，父容器尺寸變了
+      // 但視窗沒變，畫布就會停在舊尺寸（只畫滿一部分、其餘露出底色）。
+      // 直接觀察父容器本身的尺寸，任何原因造成的尺寸變化都能跟上；
+      // 只在寬高「實際改變」時才重設（重設 canvas.width 會清空畫面，再靠 redrawAll 重畫）。
+      let lastW = parent.getBoundingClientRect().width;
+      let lastH = parent.getBoundingClientRect().height;
+      const ro = new ResizeObserver(() => {
+        const r = parent.getBoundingClientRect();
+        if (Math.abs(r.width - lastW) < 0.5 && Math.abs(r.height - lastH) < 0.5) return;
+        lastW = r.width;
+        lastH = r.height;
+        resize();
+      });
+      ro.observe(parent);
+      return () => {
+        window.removeEventListener('resize', resize);
+        ro.disconnect();
+      };
     }, [redrawAll]);
 
     // 每次畫布被停用（切換為不可畫）時，清掉還在進行中的本機筆畫狀態，

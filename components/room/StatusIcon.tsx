@@ -77,8 +77,8 @@ export function StatusIcon({ kind, color, size = 64 }: StatusIconProps) {
         height={size * 0.46}
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#fff"
-        strokeWidth={2}
+        stroke="var(--ink)"
+        strokeWidth={2.4}
         strokeLinecap="round"
         strokeLinejoin="round"
       >

@@ -871,3 +871,19 @@
 - DRAW_GUESS／DRAW_TELEPHONE 完整回歸測試確認不受影響
 - 比照音樂猜歌專案：Vultr VPS、PostgreSQL、Cloudflare Tunnel（沿用同一帳號另開子網域）、systemd 服務（`ExecStart` 改為執行 `tsx server.ts` 或先 `next build` 再啟動，需視正式環境是否安裝 `tsx` 決定）
 - 行動裝置實測、效能檢查
+
+
+## 全站設計重構「素描本派對桌」
+
+詳細規格見 `design-system/draw-guess-party/MASTER.md`。
+
+- 新增 `app/design.css`（token、基礎、元件、動效）與 `app/pages.css`（首頁 `.hm-*`、線上大廳 `.ol-*`、房間共用 `.rm-*`）；`globals.css` 只保留畫布版面與手機斷點規則。舊 token 名稱全部保留並重新賦值，三種模式房間畫面自動繼承。
+- 字型改為自架（`@fontsource-variable/fredoka`、`@fontsource-variable/chiron-goround-tc`、`@fontsource/iansui`），不依賴第三方字型服務。
+- 首頁重做：手寫標題、**可塗鴉畫板**（畫完跳出假玩家猜測氣泡）、題庫跑馬燈、三種玩法 SVG 描線卡片、三步驟、結尾 CTA、快速加入房間。
+- `/online` 重做：左玩法預覽／右表單；玩法為 radio 卡片；進階設定用原生 `<details>`；單一輸入框式房間代碼；支援 `?mode=`、`?tab=join&code=`。
+- 房間：新增共用 `RoomTicket`（入場券＋直接攤開的 QR），取代三處重複的複製區塊並刪除 `QrCodeButton`；`PlayerList` 頭像化；聊天室改對話氣泡；`RoundTimer` 改鉛筆寫完式；設定面板晶片改 `aria-pressed`。
+- 遊戲畫面欄寬：桌機畫布由約 475px 增至約 860px（`.rm-page`）。公布頁（拼圖接畫、接龍）改為多欄拍立得卡片。
+- 修正：`DrawingCanvas` 新增 `ResizeObserver`（大廳→遊戲欄寬改變時畫布停在舊尺寸）；`StrokeReplay` 改用 `offsetWidth/Height` 並加 `ResizeObserver`（旋轉卡片下尺寸失真）。
+- 無障礙：焦點環、skip link、`aria-pressed`、`role=progressbar`/`tablist`、錯誤 `role=alert` 並聚焦欄位、觸控目標 44px、減少動態與無 JS 下內容完整。
+- 驗證：`tsc`／`eslint`／`next build` 通過；以無頭 Chromium 實際截圖（桌機 1440、平板 768、手機 390）逐頁檢視；三種模式 socket 回歸測試通過；自動化檢查無橫向溢出、無 JS 錯誤。
+- 已知限制：沙盒無法連 Google Fonts／真機，未測真實手機觸控手感與實體裝置字型渲染；首頁畫板在觸控裝置採 `touch-action:none`，畫板範圍內無法以該區域捲動頁面。

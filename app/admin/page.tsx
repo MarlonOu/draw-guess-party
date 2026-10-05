@@ -124,26 +124,27 @@ export default function AdminWordsPage() {
   };
 
   return (
-    <main className="dg-page" style={{ maxWidth: 860, margin: '0 auto', padding: 24 }}>
+    <main id="main" className="dg-page" style={{ maxWidth: 960, margin: '0 auto', padding: 24, width: '100%' }}>
       <div style={{ marginBottom: 16 }}>
         <BackButton href="/" label="首頁" />
       </div>
       <p className="dg-eyebrow" style={{ marginBottom: 8 }}>
         管理後台
       </p>
-      <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 24 }}>題庫管理</h1>
+      <h1 className="ol-h1" style={{ marginBottom: 28 }}>題庫管理</h1>
 
       {error && (
         <div
-          className="dg-card"
-          style={{ padding: 12, marginBottom: 16, background: 'var(--red-soft)' }}
+          className="dg-notice"
+          role="alert"
+          style={{ marginBottom: 16 }}
         >
           {error}
         </div>
       )}
 
-      <section className="dg-card" style={{ padding: 20, marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>新增題目</h2>
+      <section className="dg-card" style={{ padding: 24, marginBottom: 28 }}>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: 14 }}>新增題目</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input
             className="dg-input"
@@ -175,8 +176,8 @@ export default function AdminWordsPage() {
         </div>
       </section>
 
-      <section className="dg-card" style={{ padding: 20, marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>批次匯入</h2>
+      <section className="dg-card" style={{ padding: 24, marginBottom: 28 }}>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: 10 }}>批次匯入</h2>
         <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 8 }}>
           每行一筆，格式：<code>題目,分類,難度</code>（難度可省略，預設「中」），已存在的
           題目+分類組合會自動略過。
@@ -198,8 +199,8 @@ export default function AdminWordsPage() {
         )}
       </section>
 
-      <section className="dg-card" style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
+      <section className="dg-card" style={{ padding: 24 }}>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: 14 }}>
           題庫列表（共 {words.length} 題）
         </h2>
 

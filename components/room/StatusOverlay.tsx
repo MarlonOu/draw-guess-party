@@ -44,7 +44,7 @@ interface StatusOverlayProps {
 export function StatusOverlay({ icon, iconColor, title, children, standalone = false }: StatusOverlayProps) {
   return (
     <div
-      className={standalone ? 'dg-card' : undefined}
+      className={standalone ? 'dg-card dg-taped' : 'rm-overlay'}
       style={
         standalone
           ? {
@@ -73,7 +73,7 @@ export function StatusOverlay({ icon, iconColor, title, children, standalone = f
           : {
               position: 'absolute',
               inset: 0,
-              background: 'rgba(255,255,255,0.96)',
+              background: 'rgba(255,253,248,0.96)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -86,7 +86,7 @@ export function StatusOverlay({ icon, iconColor, title, children, standalone = f
       }
     >
       <StatusIcon kind={icon} color={iconColor} />
-      <h2 style={{ fontSize: 21, fontWeight: 900, letterSpacing: '-0.01em' }}>{title}</h2>
+      <h2 style={{ fontSize: 'clamp(1.3rem, 3.4vw, 1.7rem)', fontWeight: 900 }}>{title}</h2>
       {children}
     </div>
   );

@@ -8,8 +8,7 @@ import { PlayerList } from '../../../../components/room/PlayerList';
 import { GuessChatBox } from '../../../../components/room/GuessChatBox';
 import { RoundTimer } from '../../../../components/room/RoundTimer';
 import { BackButton } from '../../../../components/nav/BackButton';
-import { CopyButton } from '../../../../components/room/CopyButton';
-import { QrCodeButton } from '../../../../components/room/QrCodeButton';
+import { RoomTicket } from '../../../../components/room/RoomTicket';
 import { StatusOverlay } from '../../../../components/room/StatusOverlay';
 import { StatusIcon } from '../../../../components/room/StatusIcon';
 import { RoomSettingsPanel } from '../../../../components/room/RoomSettingsPanel';
@@ -190,7 +189,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
 
   if (error) {
     return (
-      <main className="dg-page" style={{ maxWidth: 480, margin: '0 auto', padding: 24, textAlign: 'center' }}>
+      <main id="main" className="dg-page" style={{ width: '100%', maxWidth: 480, margin: '0 auto', padding: 24, textAlign: 'center' }}>
         <div style={{ marginBottom: 16, textAlign: 'left' }}>
           <BackButton href="/online" label="線上模式" />
         </div>
@@ -217,22 +216,27 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
   // 送出的 room:join 請求，跳出這個表單讓使用者當場輸入暱稱後才加入房間。
   if (identity === null) {
     return (
-      <main className="dg-page" style={{ maxWidth: 420, margin: '0 auto', padding: 24 }}>
+      <main id="main" className="dg-page" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: 24 }}>
         <div style={{ marginBottom: 16 }}>
           <BackButton href="/online" label="線上模式" />
         </div>
         <p className="dg-eyebrow" style={{ marginBottom: 8 }}>
           加入房間
         </p>
-        <h1 style={{ fontSize: 24, fontWeight: 900, marginBottom: 20 }}>
-          房間代碼 {joinCode}
+        <h1 className="ol-h1" style={{ fontSize: 'clamp(1.6rem, 6vw, 2.4rem)', marginBottom: 24 }}>
+          房間代碼 <span className="rm-gate-code">{joinCode}</span>
         </h1>
-        <div className="dg-card" style={{ padding: 20 }}>
-          <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+        <div className="dg-card dg-taped ol-form" style={{ ['--tape-tilt' as string]: '-3deg' }}>
+          <div className="dg-field">
+          <label htmlFor="gate-name" className="dg-label">
             你的暱稱
           </label>
           <input
+            id="gate-name"
             className="dg-input"
+            maxLength={16}
+            autoComplete="nickname"
+            autoFocus
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
             onKeyDown={(e) => {
@@ -248,8 +252,8 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
               setIdentity(newIdentity);
             }}
             placeholder="例如：阿翔"
-            style={{ marginBottom: 16 }}
           />
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -259,8 +263,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
               sessionStorage.setItem(`draw-guess-party:${joinCode}`, JSON.stringify(newIdentity));
               setIdentity(newIdentity);
             }}
-            className="dg-btn dg-btn-primary dg-btn-block"
-            style={{ padding: '12px 16px' }}
+            className="dg-btn dg-btn-primary dg-btn-lg dg-btn-block"
           >
             加入房間
           </button>
@@ -271,8 +274,11 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
 
   if (!room) {
     return (
-      <main className="dg-page" style={{ maxWidth: 480, margin: '0 auto', padding: 24, textAlign: 'center' }}>
-        <p style={{ color: 'var(--ink-soft)' }}>連線中…</p>
+      <main id="main" className="dg-page" style={{ width: '100%', maxWidth: 480, margin: '0 auto', padding: 24, textAlign: 'center' }}>
+        <div className="rm-loading" role="status">
+          <span className="rm-loading-dot" aria-hidden="true" />
+          <p>正在走進房間…</p>
+        </div>
       </main>
     );
   }
@@ -345,7 +351,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
     room.status === 'playing' && room.roundPhase === 'drawing' && room.wordChosen && !roundEndInfo;
 
   return (
-    <main className="dg-page" style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
+    <main id="main" className={`dg-page rm-page${overlayKind === 'lobby' ? ' rm-lobby' : ''}`} style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <BackButton href="/online" label="線上模式" onBeforeLeave={leaveRoom} />
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -364,7 +370,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
                 className="dg-tag"
                 style={{
                   background: isDrawer ? 'var(--accent)' : 'var(--blue-soft)',
-                  color: isDrawer ? '#fff' : 'var(--ink)',
+                  color: 'var(--ink)',
                   fontWeight: 700,
                 }}
               >
@@ -394,18 +400,20 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
       </div>
 
       <div>
-        <div className="dg-canvas-row" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>
+        <div className="dg-canvas-row" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch', justifyContent: overlayKind === 'lobby' ? 'center' : undefined }}>
+          {overlayKind !== 'lobby' && (
           <Toolbar
-            color={color}
-            width={width}
-            tool={tool}
-            onColorChange={setColor}
-            onWidthChange={setWidth}
-            onToolChange={setTool}
-            onUndo={() => canvasHandleRef.current?.undo()}
-            onClear={() => canvasHandleRef.current?.clear()}
-            disabled={!canDrawNow}
-          />
+              color={color}
+              width={width}
+              tool={tool}
+              onColorChange={setColor}
+              onWidthChange={setWidth}
+              onToolChange={setTool}
+              onUndo={() => canvasHandleRef.current?.undo()}
+              onClear={() => canvasHandleRef.current?.clear()}
+              disabled={!canDrawNow}
+            />
+          )}
 
           {overlayKind === 'lobby' ? (
             // lobby 疊層內容量遠比其他狀態多（房間代碼、邀請連結、分類/難度篩選、
@@ -416,31 +424,9 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
             // 視覺上維持同樣的圖示+標題+外框樣式，只是不會被硬性裁切。
             <div className="dg-canvas-frame">
               <StatusOverlay standalone icon="clock" iconColor="var(--blue)" title="遊戲尚未開始">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
-                      房間代碼 <strong style={{ color: 'var(--ink)' }}>{room.joinCode}</strong>
-                    </span>
-                    <CopyButton value={room.joinCode} label="複製房間代碼" />
-                  </div>
-                  {pageUrl && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: 'var(--ink-soft)',
-                          maxWidth: 200,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {pageUrl}
-                      </span>
-                      <CopyButton value={pageUrl} label="複製邀請連結" />
-                      <QrCodeButton value={pageUrl} label="顯示邀請連結的 QR code" />
-                    </div>
-                  )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center', width: '100%' }}>
+                  <RoomTicket joinCode={room.joinCode} url={pageUrl} />
+                  
                 </div>
 
                 <RoomSettingsPanel
@@ -587,7 +573,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
                             paddingTop: 10,
                             fontWeight: 900,
                             fontSize: 22,
-                            color: '#fff',
+                            color: 'var(--ink)',
                           }}
                         >
                           {rankIndex + 1}

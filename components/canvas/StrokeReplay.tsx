@@ -53,7 +53,10 @@ export function StrokeReplay({ strokes, emptyLabel }: StrokeReplayProps) {
       // 300×150，拿 canvas 自己的框來量，量到的是這個預設值，不是容器實際尺寸，
       // 等於拿畫布量自己，一個自我參照的邏輯錯誤。父層 div（width/height:'100%'）
       // 是一般元素，不是替換元素，不會有這個問題，可以正確反映外層容器的實際尺寸。
-      const rect = parent.getBoundingClientRect();
+      // 用 offsetWidth/Height（未經 transform 的版面尺寸）而不是 getBoundingClientRect：
+      // 公布畫廊的卡片帶有 rotate()，後者會回傳旋轉後放大的外接矩形，
+      // 畫布尺寸跟著放大，筆畫座標比例就會輕微失真。
+      const rect = { width: parent.offsetWidth, height: parent.offsetHeight };
       const dpr = window.devicePixelRatio || 1;
       canvas.style.width = `${rect.width}px`;
       canvas.style.height = `${rect.height}px`;
@@ -86,7 +89,20 @@ export function StrokeReplay({ strokes, emptyLabel }: StrokeReplayProps) {
 
     render();
     window.addEventListener('resize', render);
-    return () => window.removeEventListener('resize', render);
+    // 容器尺寸因任何原因改變（版面切換、卡片進場、響應式）都要重畫，不只視窗縮放
+    let lastW = parent.offsetWidth;
+    let lastH = parent.offsetHeight;
+    const ro = new ResizeObserver(() => {
+      if (parent.offsetWidth === lastW && parent.offsetHeight === lastH) return;
+      lastW = parent.offsetWidth;
+      lastH = parent.offsetHeight;
+      render();
+    });
+    ro.observe(parent);
+    return () => {
+      window.removeEventListener('resize', render);
+      ro.disconnect();
+    };
   }, [strokes]);
 
   const isEmpty = strokes.every((s) => s.points.length < 2);

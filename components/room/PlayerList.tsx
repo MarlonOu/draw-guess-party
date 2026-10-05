@@ -15,6 +15,14 @@ interface PlayerListProps {
   showScore?: boolean;
 }
 
+/** 頭像底色：依玩家 id 雜湊挑一個麥克筆色，同一個人永遠是同一種顏色 */
+const AVATAR_COLORS = ['var(--accent)', 'var(--amber)', 'var(--green)', 'var(--blue)', 'var(--pink)', 'var(--grape)'];
+function avatarColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
 export function PlayerList({
   players,
   drawerPlayerId,
@@ -27,78 +35,35 @@ export function PlayerList({
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
   return (
-    <ul
-      style={{
-        listStyle: 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        maxHeight,
-        overflowY: 'auto',
-        paddingRight: 4,
-      }}
-    >
+    <ul className="rm-players" style={{ maxHeight }}>
       {sorted.map((p) => {
         const isDrawing = p.id === drawerPlayerId;
         const isNext = !isDrawing && p.id === nextDrawerPlayerId;
         const hasGuessedCorrectly = correctGuesserIds.includes(p.id);
         const isHost = p.id === hostPlayerId;
+        const cls = ['rm-player', isDrawing && 'is-drawing', hasGuessedCorrectly && 'is-correct', !p.connected && 'is-offline']
+          .filter(Boolean)
+          .join(' ');
         return (
-          <li
-            key={p.id}
-            className="dg-card"
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '8px 12px',
-              boxShadow: 'none',
-              border: `2px solid ${isDrawing ? 'var(--accent)' : hasGuessedCorrectly ? 'var(--green)' : 'var(--line)'}`,
-              background: hasGuessedCorrectly ? 'var(--green-soft)' : 'var(--paper)',
-              opacity: p.connected ? 1 : 0.5,
-            }}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, flexWrap: 'wrap', rowGap: 4 }}>
-              {isHost && (
-                <span
-                  className="dg-tag"
-                  style={{ padding: '2px 8px', background: 'var(--amber)', color: '#fff', whiteSpace: 'nowrap' }}
-                >
-                  房主
-                </span>
-              )}
-              {isDrawing && (
-                <span
-                  className="dg-tag"
-                  style={{ padding: '2px 8px', background: 'var(--accent)', color: '#fff', whiteSpace: 'nowrap' }}
-                >
-                  畫圖中
-                </span>
-              )}
-              {isNext && (
-                <span
-                  className="dg-tag"
-                  style={{ padding: '2px 8px', background: 'var(--blue-soft)', whiteSpace: 'nowrap' }}
-                >
-                  下一位
-                </span>
-              )}
-              {hasGuessedCorrectly && (
-                <span
-                  className="dg-tag"
-                  style={{ padding: '2px 8px', background: 'var(--green)', color: '#fff', whiteSpace: 'nowrap' }}
-                >
-                  已答對
-                </span>
-              )}
-              <span style={{ whiteSpace: 'nowrap' }}>
+          <li key={p.id} className={cls}>
+            <span className="rm-avatar" style={{ background: avatarColor(p.id) }} aria-hidden="true">
+              {Array.from(p.displayName)[0] ?? '?'}
+            </span>
+            <span className="rm-player-main">
+              <span className="rm-player-name">
                 {p.displayName}
-                {!p.connected && <span style={{ fontWeight: 400 }}>（已離線）</span>}
+                {!p.connected && <span className="rm-player-off">（已離線）</span>}
               </span>
+              {(isHost || isDrawing || isNext || hasGuessedCorrectly) && (
+                <span className="rm-player-tags">
+                  {isHost && <span className="dg-tag rm-tag" style={{ background: 'var(--amber)' }}>房主</span>}
+                  {isDrawing && <span className="dg-tag rm-tag" style={{ background: 'var(--accent)' }}>畫圖中</span>}
+                  {isNext && <span className="dg-tag rm-tag" style={{ background: 'var(--blue-soft)' }}>下一位</span>}
+                  {hasGuessedCorrectly && <span className="dg-tag rm-tag" style={{ background: 'var(--green)' }}>已答對</span>}
+                </span>
+              )}
             </span>
-            <span style={{ fontWeight: 800, color: 'var(--accent-ink)' }}>
-              {showScore ? p.score : ''}
-            </span>
+            {showScore && <span className="rm-player-score" aria-label={`${p.score} 分`}>{p.score}</span>}
           </li>
         );
       })}
