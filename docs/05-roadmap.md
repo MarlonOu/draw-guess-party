@@ -906,4 +906,6 @@
 - 根因（量測確認）：跑馬燈 `.hm-marquee` 寬 104%＋負邊距＋旋轉，使 `body.scrollWidth` 在 390px 視窗下為 399px；iOS Safari 對超出視窗的內容會擴大版面視口，`html/body{overflow-x:hidden}` 擋不住。連點按鈕又被判定為雙擊縮放，放大疊加。
 - 修正：跑馬燈改包在 `.hm-marquee-clip`（`overflow-x:clip`）內、寬度 100%；`html{touch-action:manipulation}` 全站停用雙擊縮放；新增 `components/home/ModeCta.tsx`，點擊後 `aria-busy` 鎖定避免連點。
 - 驗證：Chromium 觸控模擬 320/360/390/430/768 皆無橫向溢位（scrollWidth＝視窗寬）；iOS 實機需另行確認。
-- 追加（同一問題，回報「單點即三張卡一起放大」）：新增 `components/DoubleTapGuard.tsx`（350ms 內連續 touchend 取消預設、攔截 gesturestart；輸入框／canvas 例外），viewport 加 `maximumScale: 1`。
+- 真正根因（依使用者錄影確認：文字大小不變、只有卡片與插圖越點越寬）：手機版 `.hm-modes`／`.hm-steps` 等使用 `grid-template-columns: 1fr`（最小值為 auto＝內容最小寬），加上插圖是「aspect-ratio＋由寬度決定高度的 SVG」，WebKit 會把內容高度經長寬比回推成最小寬度，每次重排（點擊觸發 :active／transition）軌道就再撐寬一點。
+- 修正：所有 `1fr` 單欄改 `minmax(0, 1fr)`；`.hm-mode-li`／`.hm-mode` 加 `min-width:0`；`.hm-mode-art > .art` 改絕對定位（inset:10px），不再參與尺寸計算。已移除前一輪無效的 DoubleTapGuard 與 maximumScale（影響無障礙）。
+- 驗證：Chromium 320/390/430/700px 卡片寬度固定、無溢位；iOS 實機需確認。

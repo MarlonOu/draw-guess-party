@@ -6,7 +6,6 @@ import type { Metadata, Viewport } from 'next';
 import '@fontsource-variable/fredoka';
 import '@fontsource-variable/chiron-goround-tc';
 import '@fontsource/iansui';
-import { DoubleTapGuard } from '../components/DoubleTapGuard';
 import './design.css';
 import './pages.css';
 import './globals.css';
@@ -29,7 +28,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
   themeColor: '#f7f0e1',
 };
 
@@ -37,7 +35,6 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="zh-TW" data-scroll-behavior="smooth">
       <body>
-        <DoubleTapGuard />
         <a className="dg-skip" href="#main">
           跳到主要內容
         </a>

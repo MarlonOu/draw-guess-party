@@ -481,6 +481,7 @@
 
 .hm-mode-li {
   display: flex;
+  min-width: 0;
 }
 
 .hm-mode {
@@ -489,6 +490,7 @@
   flex-direction: column;
   gap: 14px;
   width: 100%;
+  min-width: 0;
   padding: 18px 18px 22px;
   transform: rotate(var(--tilt, 0deg));
   transition:
@@ -502,11 +504,21 @@
   }
 }
 
+/* 插圖絕對定位、不參與尺寸計算：WebKit 會把「aspect-ratio＋內容撐高的 SVG」回推成最小寬度，
+   每次重排卡片就再變寬一點（iOS 上表現為點一下卡片放大一次）。 */
 .hm-mode-art {
+  position: relative;
   aspect-ratio: 4 / 3;
-  padding: 10px;
+  min-width: 0;
+  min-height: 0;
   border: 2px solid var(--ink);
   border-radius: 14px;
+}
+.hm-mode-art > .art {
+  position: absolute;
+  inset: 10px;
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
 }
 
 .hm-mode h3 {
@@ -690,7 +702,7 @@
     font-size: clamp(4.2rem, 16vw, 8rem);
   }
   .hm-hero {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .hm-hero-stage {
     max-width: 560px;
@@ -702,7 +714,7 @@
 @media (max-width: 860px) {
   .hm-modes,
   .hm-steps {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .hm-modes {
     max-width: 520px;
@@ -1082,7 +1094,7 @@
 /* ---- /online 響應式 ---- */
 @media (max-width: 900px) {
   .ol-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .ol-aside {
     position: relative;
@@ -1099,11 +1111,11 @@
 
 @media (max-width: 600px) {
   .ol-modes {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .ol-mode-body {
     display: grid;
-    grid-template-columns: 92px 1fr;
+    grid-template-columns: 92px minmax(0, 1fr);
     grid-template-rows: auto auto;
     column-gap: 12px;
     align-items: center;
@@ -1221,7 +1233,7 @@
 
 @media (max-width: 520px) {
   .rm-ticket {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .rm-ticket-stub {
     flex-direction: row;
