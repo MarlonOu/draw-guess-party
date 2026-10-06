@@ -112,6 +112,11 @@ body {
   overflow-x: hidden;
 }
 
+/* 全站停用「雙擊縮放」：連點按鈕時 iOS Safari 會把它當成縮放手勢（捏合縮放仍可用） */
+html {
+  touch-action: manipulation;
+}
+
 body {
   min-height: 100%;
   display: flex;

@@ -901,3 +901,8 @@
 - 修法：該連結加上 `prefetch={false}`，只有使用者真的點擊才請求。其餘 `<Link>` 都指向公開頁面（`/`、`/online`），無同類風險。
 - 驗證：修正後同樣操作，對 `/admin` 的請求為零。
 - 日後新增指向受保護頁面的連結都要加 `prefetch={false}`。
+
+### 修正：iPhone Safari 首頁點「選這個玩法」整頁越點越放大
+- 根因（量測確認）：跑馬燈 `.hm-marquee` 寬 104%＋負邊距＋旋轉，使 `body.scrollWidth` 在 390px 視窗下為 399px；iOS Safari 對超出視窗的內容會擴大版面視口，`html/body{overflow-x:hidden}` 擋不住。連點按鈕又被判定為雙擊縮放，放大疊加。
+- 修正：跑馬燈改包在 `.hm-marquee-clip`（`overflow-x:clip`）內、寬度 100%；`html{touch-action:manipulation}` 全站停用雙擊縮放；新增 `components/home/ModeCta.tsx`，點擊後 `aria-busy` 鎖定避免連點。
+- 驗證：Chromium 觸控模擬 320/360/390/430/768 皆無橫向溢位（scrollWidth＝視窗寬）；iOS 實機需另行確認。

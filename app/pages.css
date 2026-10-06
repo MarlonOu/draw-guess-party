@@ -403,10 +403,23 @@
 }
 
 /* ---- 跑馬燈 ---- */
+/* 外層負責裁掉旋轉後超出視窗的部分：iOS Safari 遇到比視窗寬的內容會放大版面視口，
+   html/body 的 overflow-x:hidden 擋不住，必須在源頭裁切 */
+.hm-marquee-clip {
+  overflow-x: clip;
+  overflow-y: visible;
+  padding-block: clamp(28px, 5vw, 64px) clamp(28px, 5vw, 56px);
+  max-width: 100%;
+}
+@supports not (overflow: clip) {
+  .hm-marquee-clip {
+    overflow: hidden;
+  }
+}
 .hm-marquee {
   position: relative;
-  width: 104%;
-  margin: clamp(28px, 5vw, 64px) -2% clamp(28px, 5vw, 56px);
+  width: 100%;
+  margin: 0;
   overflow: hidden;
   color: var(--paper);
   background: var(--ink);
@@ -518,6 +531,10 @@
   align-self: flex-start;
 }
 /* 整張卡片都可點，但真正的連結仍是按鈕本身（鍵盤、讀屏的焦點都落在它上面） */
+.hm-mode-cta[aria-busy='true'] {
+  pointer-events: none;
+  opacity: 0.7;
+}
 .hm-mode-cta::after {
   content: '';
   position: absolute;

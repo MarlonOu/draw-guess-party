@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Reveal } from '../components/home/Reveal';
 import { HeroStage } from '../components/home/HeroStage';
 import { QuickJoin } from '../components/home/QuickJoin';
+import { ModeCta } from '../components/home/ModeCta';
 import {
   LogoMark,
   Star,
@@ -148,10 +149,12 @@ export default function Home() {
         </section>
 
         {/* -------------------------------------------------------- Marquee */}
-        <div className="hm-marquee" aria-hidden="true">
-          <div className="hm-marquee-track">
-            <div className="hm-marquee-group">{marquee}</div>
-            <div className="hm-marquee-group">{marquee}</div>
+        <div className="hm-marquee-clip">
+          <div className="hm-marquee" aria-hidden="true">
+            <div className="hm-marquee-track">
+              <div className="hm-marquee-group">{marquee}</div>
+              <div className="hm-marquee-group">{marquee}</div>
+            </div>
           </div>
         </div>
 
@@ -184,14 +187,13 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <Link
+                  <ModeCta
                     href={`/online?mode=${m.key}`}
-                    className="dg-btn hm-mode-cta"
-                    aria-label={`選擇「${m.name}」並建立房間`}
+                    label={`選擇「${m.name}」並建立房間`}
                   >
                     選這個玩法
                     <Arrow />
-                  </Link>
+                  </ModeCta>
                 </article>
               </Reveal>
             ))}
