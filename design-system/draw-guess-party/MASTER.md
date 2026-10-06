@@ -57,3 +57,7 @@ emoji 當圖示、白字配珊瑚橘、模糊陰影、只靠顏色表達狀態�
 ## 防止 iOS 放大（補充）
 - 任何旋轉／負邊距／超寬裝飾元素，必須包在 `overflow-x: clip` 的外層裡，不可只靠 html/body 的 overflow-x:hidden。
 - 全站 `html{touch-action:manipulation}`；導頁按鈕點擊後鎖定（aria-busy）。
+
+## 品牌圖示與音效（補充）
+- 主圖：珊瑚橘 `--accent` 圓角底＋墨色手繪問號＋黃色鉛筆；≤48px 一律用「無鉛筆」小尺寸版。
+- 音效預設靜音，須由使用者手勢開啟；偏好以 `dg-music` 存於 localStorage。

@@ -1687,3 +1687,97 @@
 .dg-reveal-card:nth-child(even)::before {
   transform: rotate(4deg);
 }
+
+/* ============================================================ 音樂開關 ===== */
+.hm-music {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0.5rem 1rem 0.5rem 0.85rem;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform var(--dur-2) var(--ease-spring),
+    box-shadow var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
+}
+.hm-music[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
+.hm-music:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+@media (hover: hover) {
+  .hm-music:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+}
+.hm-music:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-press);
+}
+
+/* 三根跳動的音量條：開啟時動、關閉時收成平線 */
+.hm-music-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+}
+.hm-music-eq i {
+  display: block;
+  width: 4px;
+  background: var(--ink);
+  border-radius: 2px;
+  transition: height var(--dur-2) var(--ease-out);
+}
+.hm-music-eq i:nth-child(1) {
+  height: 7px;
+}
+.hm-music-eq i:nth-child(2) {
+  height: 12px;
+}
+.hm-music-eq i:nth-child(3) {
+  height: 9px;
+}
+.hm-music-eq.is-on i {
+  animation: hm-eq 0.9s ease-in-out infinite alternate;
+}
+.hm-music-eq.is-on i:nth-child(2) {
+  animation-delay: -0.3s;
+  animation-duration: 0.7s;
+}
+.hm-music-eq.is-on i:nth-child(3) {
+  animation-delay: -0.6s;
+  animation-duration: 1.1s;
+}
+@keyframes hm-eq {
+  from {
+    height: 4px;
+  }
+  to {
+    height: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-music-eq.is-on i {
+    animation: none;
+    height: 12px;
+  }
+}

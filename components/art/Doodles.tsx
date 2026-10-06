@@ -68,14 +68,17 @@ export function LogoMark({ size = 40 }: { size?: number }) {
         stroke="var(--ink)"
         strokeWidth="3"
       />
-      <path
-        d="M13 31c4-14 9-16 11-9 2 6 6 4 11-8"
-        stroke="var(--ink)"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="35" cy="14" r="3.2" fill="var(--paper)" stroke="var(--ink)" strokeWidth="2.5" />
+      {/* 手繪問號（與 favicon／app icon 同一個圖形，座標取自 512 座標的主圖） */}
+      <g transform="translate(24 24.4) scale(0.0925) translate(-252 -259)">
+        <path
+          d="M168 196C166 118 232 84 286 106C344 130 350 200 296 240C268 261 258 280 258 314"
+          stroke="var(--ink)"
+          strokeWidth="54"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="258" cy="392" r="34" fill="var(--paper)" stroke="var(--ink)" strokeWidth="26" />
+      </g>
     </svg>
   );
 }

@@ -11,6 +11,8 @@ import './pages.css';
 import './globals.css';
 
 export const metadata: Metadata = {
+  // OG／Twitter 圖片需要絕對網址；正式站網域可用 NEXT_PUBLIC_SITE_URL 覆寫
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://play-q4x9.marlonou.com'),
   title: {
     default: '畫圖猜謎派對｜一人畫、大家猜的線上派對遊戲',
     template: '%s｜畫圖猜謎派對',

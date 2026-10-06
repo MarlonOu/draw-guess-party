@@ -3,6 +3,7 @@ import { Reveal } from '../components/home/Reveal';
 import { HeroStage } from '../components/home/HeroStage';
 import { QuickJoin } from '../components/home/QuickJoin';
 import { ModeCta } from '../components/home/ModeCta';
+import { MusicToggle } from '../components/home/MusicToggle';
 import {
   LogoMark,
   Star,
@@ -237,6 +238,8 @@ export default function Home() {
           </Reveal>
         </section>
       </main>
+
+      <MusicToggle />
 
       <footer className="hm-wrap hm-foot">
         <span>畫圖猜謎派對 · 手機與電腦皆可遊玩</span>

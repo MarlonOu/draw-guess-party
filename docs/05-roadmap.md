@@ -909,3 +909,10 @@
 - 真正根因（依使用者錄影確認：文字大小不變、只有卡片與插圖越點越寬）：手機版 `.hm-modes`／`.hm-steps` 等使用 `grid-template-columns: 1fr`（最小值為 auto＝內容最小寬），加上插圖是「aspect-ratio＋由寬度決定高度的 SVG」，WebKit 會把內容高度經長寬比回推成最小寬度，每次重排（點擊觸發 :active／transition）軌道就再撐寬一點。
 - 修正：所有 `1fr` 單欄改 `minmax(0, 1fr)`；`.hm-mode-li`／`.hm-mode` 加 `min-width:0`；`.hm-mode-art > .art` 改絕對定位（inset:10px），不再參與尺寸計算。已移除前一輪無效的 DoubleTapGuard 與 maximumScale（影響無障礙）。
 - 驗證：Chromium 320/390/430/700px 卡片寬度固定、無溢位；iOS 實機需確認。
+
+
+### 品牌圖示與首頁背景音樂
+- 圖示：手繪問號（猜）＋鉛筆（畫）＋珊瑚橘圓角底，色票取自 design tokens。`app/icon.svg`（小尺寸版，無鉛筆、問號加粗）、`app/favicon.ico`（16/32/48）、`app/apple-icon.png`（180）、`public/icons/`（192／512／maskable-512）、`app/manifest.ts`（PWA）、`app/opengraph-image.png`＋`twitter-image.png`（1200×630）。站內 `LogoMark` 改成同一個問號圖形。`metadataBase` 預設 https://play-q4x9.marlonou.com，可用 `NEXT_PUBLIC_SITE_URL` 覆寫。
+- 音樂：原創合成（Python/numpy：marimba 旋律、撥弦低音、木魚／拍手／搖沙，C 大調 104 BPM、16 小節約 37 秒），無版權疑慮；`public/audio/party-loop.mp3`（約 500KB）。
+- 行為（`components/home/MusicToggle.tsx`）：預設靜音，使用者按右下角開關才播；偏好存 localStorage，下次造訪在第一個手勢後接續播放；Web Audio 無縫循環；分頁隱藏時暫停；離開首頁即關閉；`aria-pressed`＋動態標籤；減少動態時音量條不跳動。
+- 重新產生音樂：`synth.py` 的旋律／和弦以文字陣列定義，改完重新執行並以 ffmpeg 編成 mp3 即可。
