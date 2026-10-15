@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * 保護 /admin 頁面與 /api/words 完整 CRUD（管理後台專用）。
+ * 保護 /admin 頁面、/api/words 完整 CRUD、/api/admin/*（投稿審核），皆為管理後台專用。
+ * 公開的 /submit 與 /api/word-submissions/*（玩家投稿）不受這層保護。
  * 公開的 /api/word-categories（唯讀分類清單，供建房頁面使用）不受這層保護。
  *
  * 帳號密碼來自環境變數 ADMIN_USER / ADMIN_PASSWORD；未設定時使用開發用預設值
@@ -33,5 +34,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/words/:path*'],
+  matcher: ['/admin/:path*', '/api/words/:path*', '/api/admin/:path*'],
 };

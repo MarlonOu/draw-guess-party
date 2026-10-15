@@ -1370,6 +1370,11 @@
   font-size: 0.85rem;
   color: var(--ink-soft);
 }
+.rm-set-hint {
+  margin: -2px 0 6px;
+  font-size: 0.8rem;
+  text-align: left;
+}
 .rm-set-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1780,4 +1785,258 @@
     animation: none;
     height: 12px;
   }
+}
+
+/* ============================================================ 換房間 ===== */
+.rm-switch-btn {
+  gap: 6px;
+  padding-inline: 0.8rem;
+  flex-shrink: 0;
+}
+.rm-dialog {
+  width: min(92vw, 420px);
+  max-width: 420px;
+  padding: 0;
+  margin: auto;
+  color: var(--ink);
+}
+.rm-dialog::backdrop {
+  background: rgba(27, 26, 46, 0.45);
+}
+.rm-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 20px 20px;
+}
+.rm-dialog-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+.rm-dialog-error {
+  padding: 8px 12px;
+  font-weight: 700;
+  color: #8f1d12;
+  background: var(--red-soft);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+.rm-dialog-warn {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background: var(--amber-soft);
+  border: 2px dashed var(--ink);
+  border-radius: 12px;
+}
+.rm-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ========================================================== 後台：投稿審核 ===== */
+.adm-sub {
+  padding: 24px;
+  margin-bottom: 28px;
+}
+.adm-sub-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.adm-h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+.adm-badge {
+  min-width: 28px;
+  padding: 2px 9px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  background: var(--accent);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+}
+.adm-tabs {
+  width: min(100%, 320px);
+}
+.adm-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: var(--amber-soft);
+  border: 2px dashed var(--ink);
+  border-radius: 12px;
+}
+.adm-empty {
+  color: var(--ink-soft);
+}
+.adm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+.adm-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 14px;
+  background: var(--paper-dim);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+}
+.adm-item-main {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.adm-item-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+.adm-item-meta {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.adm-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.adm-edit .dg-input {
+  flex: 1 1 120px;
+  padding: 6px 8px;
+}
+.adm-flags {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  list-style: none;
+}
+.adm-flag {
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.adm-flag-exact,
+.adm-flag-pending {
+  background: var(--red-soft);
+}
+.adm-flag-similar,
+.adm-flag-rejected {
+  background: var(--amber-soft);
+}
+.adm-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.adm-reject {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.adm-reject .dg-input {
+  flex: 1 1 180px;
+  padding: 6px 8px;
+}
+
+/* ============================================================ 投稿題目 ===== */
+.sb-check {
+  min-height: 1.4em;
+}
+.sb-ok {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--green-ink);
+}
+.sb-warn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--amber-soft);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+.sb-warn-block {
+  background: var(--red-soft);
+}
+.sb-warn-title {
+  font-weight: 800;
+}
+.sb-warn ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.sb-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sb-confirm input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--ink);
+}
+.sb-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.sb-done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 560px;
+  margin: 24px auto 0;
+  padding: 28px 24px;
+}
+.sb-done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hm-foot-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
 }

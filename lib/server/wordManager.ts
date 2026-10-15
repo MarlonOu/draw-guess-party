@@ -1,5 +1,6 @@
 import type { WordBankEntry, WordDifficulty } from '../types/word';
 import seedWords from '../../data/words.json';
+import { getApprovedWordsForBank, markWordRemoved, syncApprovedWord } from './submissionStore';
 
 const globalForWords = globalThis as unknown as {
   __drawGuessPartyWords?: Map<string, WordBankEntry>;
@@ -8,6 +9,8 @@ const globalForWords = globalThis as unknown as {
 function buildSeed(): Map<string, WordBankEntry> {
   const map = new Map<string, WordBankEntry>();
   for (const w of seedWords as WordBankEntry[]) map.set(w.id, w);
+  // 玩家投稿、管理員審核通過的題目（持久化在 submissions.json），啟動時併入題庫
+  for (const w of getApprovedWordsForBank()) map.set(w.id, w);
   return map;
 }
 
@@ -81,11 +84,14 @@ export function updateWord(id: string, patch: Partial<WordInput>): WordBankEntry
   if (!updated.text || !updated.category) return null;
 
   words.set(id, updated);
+  syncApprovedWord(updated);
   return updated;
 }
 
 export function deleteWord(id: string): boolean {
-  return words.delete(id);
+  const ok = words.delete(id);
+  if (ok) markWordRemoved(id);
+  return ok;
 }
 
 /**

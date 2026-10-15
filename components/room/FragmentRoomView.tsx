@@ -12,11 +12,10 @@ import { BackButton } from '../nav/BackButton';
 import { RoomTicket } from './RoomTicket';
 import { StatusOverlay } from './StatusOverlay';
 import { RoomSettingsPanel } from './RoomSettingsPanel';
+import { SwitchRoomButton } from './SwitchRoomButton';
 import { SoundToggleButton } from './SoundToggleButton';
 import { RoundTimer } from './RoundTimer';
 import {
-  FRAGMENT_DRAWING1_TIMEOUT_SEC,
-  FRAGMENT_DRAWING2_TIMEOUT_SEC,
   FRAGMENT_GUESS_TIMEOUT_SEC,
   FRAGMENT_MIN_PLAYERS,
 } from '../../lib/shared/fragmentConstants';
@@ -57,7 +56,7 @@ interface FragmentRoomViewProps {
   reveal: FragmentReveal | null;
   leaveRoom: () => void;
   startGame: () => void;
-  updateSettings: (patch: { categoryFilter?: string[]; difficultyFilter?: string[] }) => void;
+  updateSettings: (patch: { roundDurationSec?: number; categoryFilter?: string[]; difficultyFilter?: string[] }) => void;
   voteReadyForNextRound: () => void;
   setOrientation: (orientation: FragmentSplitOrientation) => void;
   submitDrawing1: () => void;
@@ -184,10 +183,10 @@ export function FragmentRoomView({
     timeLimitSec = FRAGMENT_GUESS_TIMEOUT_SEC;
     subPhaseStartedAt = guessPhaseStartedAtLocal;
   } else if (myTeam?.subPhase === 'drawing1') {
-    timeLimitSec = FRAGMENT_DRAWING1_TIMEOUT_SEC;
+    timeLimitSec = room.settings.roundDurationSec;
     subPhaseStartedAt = myTeam.subPhaseStartedAt;
   } else if (myTeam?.subPhase === 'drawing2') {
-    timeLimitSec = FRAGMENT_DRAWING2_TIMEOUT_SEC;
+    timeLimitSec = room.settings.roundDurationSec;
     subPhaseStartedAt = myTeam.subPhaseStartedAt;
   }
   const timeLeftSec =
@@ -254,6 +253,7 @@ export function FragmentRoomView({
           <span className="dg-tag" style={{ background: 'var(--blue-soft)' }}>隊友：{teammateName}</span>
         )}
         <div style={{ flex: 1, minWidth: 8 }} />
+        <SwitchRoomButton joinCode={room.joinCode} status={room.status} leaveRoom={leaveRoom} />
         <SoundToggleButton />
       </div>
 
@@ -395,7 +395,6 @@ export function FragmentRoomView({
               categories={categories}
               isHost={isHost}
               onUpdate={updateSettings}
-              showRoundDuration={false}
             />
 
             {connectedPlayerCount >= FRAGMENT_MIN_PLAYERS && fragmentAllTeamsExactlyTwo ? (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { WordBankEntry, WordDifficulty } from '../../lib/types/word';
 import { BackButton } from '../../components/nav/BackButton';
+import { SubmissionReview } from '../../components/admin/SubmissionReview';
 
 const DIFFICULTY_LABEL: Record<WordDifficulty, string> = {
   EASY: '易',
@@ -142,6 +143,9 @@ export default function AdminWordsPage() {
           {error}
         </div>
       )}
+
+      {/* 玩家投稿審核：通過後的題目會立刻進題庫，所以通過時重新讀一次下面的題庫列表 */}
+      <SubmissionReview onWordBankChanged={load} />
 
       <section className="dg-card" style={{ padding: 24, marginBottom: 28 }}>
         <h2 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: 14 }}>新增題目</h2>

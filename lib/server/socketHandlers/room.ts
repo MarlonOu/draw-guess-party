@@ -185,7 +185,10 @@ export function registerRoomHandlers(io: Server, socket: Socket) {
     const room = getRoom(joinCode);
     if (!room) return;
     if (room.status !== 'finished') return;
-    if (playerId !== room.hostPlayerId) return;
+    // 房間內任何人都可以按「回到房間」（原本只有房主）：整場結束後的自動重啟倒數
+    // 對每個人都一樣，想先回到等待畫面調整設定、換玩法的人不該被房主身分擋住。
+    // 仍然要求是這個房間裡的玩家，避免外人亂送事件。
+    if (!room.players.has(playerId)) return;
 
     clearRoundTimerForRoom(joinCode);
     returnToLobby(room);

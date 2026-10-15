@@ -11,9 +11,10 @@ import { BackButton } from '../nav/BackButton';
 import { RoomTicket } from './RoomTicket';
 import { StatusOverlay } from './StatusOverlay';
 import { RoomSettingsPanel } from './RoomSettingsPanel';
+import { SwitchRoomButton } from './SwitchRoomButton';
 import { SoundToggleButton } from './SoundToggleButton';
 import { RoundTimer } from './RoundTimer';
-import { TELEPHONE_GUESS_TIMEOUT_SEC, TELEPHONE_DRAWING_TIMEOUT_SEC } from '../../lib/shared/telephoneConstants';
+import { TELEPHONE_GUESS_TIMEOUT_SEC } from '../../lib/shared/telephoneConstants';
 
 type TelephoneYourTurn =
   | { subPhase: 'guessing'; previousStrokes: Stroke[] }
@@ -113,7 +114,7 @@ export function TelephoneRoomView({
   }, [t, isRevealing]);
 
   const timeLimitSec =
-    t?.subPhase === 'guessing' ? TELEPHONE_GUESS_TIMEOUT_SEC : TELEPHONE_DRAWING_TIMEOUT_SEC;
+    t?.subPhase === 'guessing' ? TELEPHONE_GUESS_TIMEOUT_SEC : room.settings.roundDurationSec;
   const timeLeftSec =
     t && t.subPhaseStartedAt !== null && t.subPhase !== null && !isRevealing
       ? Math.max(0, timeLimitSec - Math.floor((now - t.subPhaseStartedAt) / 1000))
@@ -165,6 +166,7 @@ export function TelephoneRoomView({
           </span>
         )}
         <div style={{ flex: 1, minWidth: 8 }} />
+        <SwitchRoomButton joinCode={room.joinCode} status={room.status} leaveRoom={leaveRoom} />
         <SoundToggleButton />
       </div>
 
@@ -369,7 +371,6 @@ export function TelephoneRoomView({
                 categories={categories}
                 isHost={isHost}
                 onUpdate={updateSettings}
-                showRoundDuration={false}
                 showTelephoneFlow
               />
 

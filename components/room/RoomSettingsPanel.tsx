@@ -1,6 +1,10 @@
 'use client';
 
+import { DRAW_TIME_OPTIONS, formatDrawTime } from '../../lib/shared/drawTime';
+import type { GameMode } from '../../lib/types/room';
+
 interface RoomSettingsValue {
+  mode?: GameMode;
   roundDurationSec: number;
   categoryFilter: string[];
   difficultyFilter: string[];
@@ -12,13 +16,18 @@ interface RoomSettingsPanelProps {
   categories: string[];
   isHost: boolean;
   onUpdate: (patch: Partial<RoomSettingsValue>) => void;
-  /** DRAW_TELEPHONE 模式沒有「每輪秒數」這個設定（用固定的猜測/作畫限時），隱藏那一區塊 */
+  /** 是否顯示「畫圖時間」區塊（三種模式都支援，預設顯示） */
   showRoundDuration?: boolean;
   /** 只有 DRAW_TELEPHONE 模式會傳 true，用來決定要不要顯示「接龍流程」切換 */
   showTelephoneFlow?: boolean;
 }
 
-const ROUND_DURATIONS = [30, 60, 90, 120];
+/** 各模式「畫圖時間」實際套用在哪一段，顯示在標題下方，避免房主以為連猜測時間也會跟著變 */
+const DRAW_TIME_HINT: Record<GameMode, string> = {
+  DRAW_GUESS: '畫圖者每一輪的作畫時間（選題另外 5 秒）',
+  DRAW_TELEPHONE: '每一棒的作畫時間（猜測固定 25 秒）',
+  FRAGMENT_DRAW: '起手與補全各自的作畫時間（猜題固定 30 秒）',
+};
 const DIFFICULTIES: { value: string; label: string }[] = [
   { value: 'EASY', label: '易' },
   { value: 'MEDIUM', label: '中' },
@@ -65,6 +74,10 @@ export function RoomSettingsPanel({
   showRoundDuration = true,
   showTelephoneFlow = false,
 }: RoomSettingsPanelProps) {
+  // 目前秒數若不在快選清單裡（例如舊房間、或日後調整過選項），也要顯示出來並維持選取
+  const durationChoices = (DRAW_TIME_OPTIONS as readonly number[]).includes(settings.roundDurationSec)
+    ? [...DRAW_TIME_OPTIONS]
+    : [...DRAW_TIME_OPTIONS, settings.roundDurationSec].sort((a, b) => a - b);
   const telephoneFlowText = settings.telephoneFlow === 'alternating' ? '奇數畫偶數猜' : '每人先猜再畫';
 
   if (!isHost) {
@@ -78,7 +91,7 @@ export function RoomSettingsPanel({
     return (
       <p style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'left' }}>
         目前設定：
-        {showRoundDuration && `${settings.roundDurationSec} 秒／`}
+        {showRoundDuration && `畫圖 ${formatDrawTime(settings.roundDurationSec)}／`}
         分類 {categoryText}／難度 {difficultyText}
         {showTelephoneFlow && `／流程 ${telephoneFlowText}`}
       </p>
@@ -127,11 +140,12 @@ export function RoomSettingsPanel({
 
       {showRoundDuration && (
         <div style={{ width: '100%' }}>
-          <SectionLabel>每輪秒數</SectionLabel>
+          <SectionLabel>畫圖時間</SectionLabel>
+          {settings.mode && <p className="dg-hint rm-set-hint">{DRAW_TIME_HINT[settings.mode]}</p>}
           <div className="rm-set-chips">
-            {ROUND_DURATIONS.map((sec) => (
+            {durationChoices.map((sec) => (
               <Chip key={sec} active={settings.roundDurationSec === sec} onClick={() => onUpdate({ roundDurationSec: sec })} compact>
-                {sec}s
+                {formatDrawTime(sec)}
               </Chip>
             ))}
           </div>

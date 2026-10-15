@@ -12,6 +12,7 @@ import { RoomTicket } from '../../../../components/room/RoomTicket';
 import { StatusOverlay } from '../../../../components/room/StatusOverlay';
 import { StatusIcon } from '../../../../components/room/StatusIcon';
 import { RoomSettingsPanel } from '../../../../components/room/RoomSettingsPanel';
+import { SwitchRoomButton } from '../../../../components/room/SwitchRoomButton';
 import { SoundToggleButton } from '../../../../components/room/SoundToggleButton';
 import { TelephoneRoomView } from '../../../../components/room/TelephoneRoomView';
 import { FragmentRoomView } from '../../../../components/room/FragmentRoomView';
@@ -385,6 +386,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
           </>
         )}
         <div style={{ flex: 1, minWidth: 8 }} />
+        <SwitchRoomButton joinCode={room.joinCode} status={room.status} leaveRoom={leaveRoom} />
         <SoundToggleButton />
       </div>
 
@@ -591,19 +593,17 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
                     <p className="dg-tag" style={{ background: 'var(--blue-soft)', fontWeight: 800 }}>
                       {restartCountdown} 秒後開始新的一場比賽
                     </p>
-                    {isHost && (
-                      <button
-                        type="button"
-                        onClick={cancelAutoRestart}
-                        className="dg-btn"
-                        style={{ padding: '8px 16px', fontSize: 13 }}
-                      >
-                        先不要開始，調整設定
-                      </button>
-                    )}
+                    <button type="button" onClick={cancelAutoRestart} className="dg-btn dg-btn-sm">
+                      回到房間（調整設定／換玩法）
+                    </button>
                   </>
                 ) : (
-                  <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>等待更多玩家加入才能開始新的一場</p>
+                  <>
+                    <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>等待更多玩家加入才能開始新的一場</p>
+                    <button type="button" onClick={cancelAutoRestart} className="dg-btn dg-btn-sm">
+                      回到房間
+                    </button>
+                  </>
                 )}
               </StatusOverlay>
             )}

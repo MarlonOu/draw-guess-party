@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRoom, toRoomSummary } from '../../../lib/server/roomManager';
 import type { GameMode } from '../../../lib/types/room';
+import { clampDrawTime, DEFAULT_DRAW_TIME_SEC } from '../../../lib/shared/drawTime';
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -16,8 +17,8 @@ export async function POST(request: NextRequest) {
       : body?.mode === 'FRAGMENT_DRAW'
         ? 'FRAGMENT_DRAW'
         : 'DRAW_GUESS';
-  const roundDurationSec =
-    typeof body?.roundDurationSec === 'number' ? body.roundDurationSec : 60;
+  // 畫圖時間三種模式共用（見 lib/shared/drawTime.ts）；沒指定就用該模式的預設值
+  const roundDurationSec = clampDrawTime(body?.roundDurationSec, DEFAULT_DRAW_TIME_SEC[mode]);
   const categoryFilter: string[] = Array.isArray(body?.categoryFilter)
     ? body.categoryFilter.filter((c: unknown) => typeof c === 'string')
     : [];

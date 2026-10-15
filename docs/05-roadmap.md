@@ -916,3 +916,13 @@
 - 音樂：原創合成（Python/numpy：marimba 旋律、撥弦低音、木魚／拍手／搖沙，C 大調 104 BPM、16 小節約 37 秒），無版權疑慮；`public/audio/party-loop.mp3`（約 500KB）。
 - 行為（`components/home/MusicToggle.tsx`）：預設靜音，使用者按右下角開關才播；偏好存 localStorage，下次造訪在第一個手勢後接續播放；Web Audio 無縫循環；分頁隱藏時暫停；離開首頁即關閉；`aria-pressed`＋動態標籤；減少動態時音量條不跳動。
 - 重新產生音樂：`synth.py` 的旋律／和弦以文字陣列定義，改完重新執行並以 ffmpeg 編成 mp3 即可。
+
+
+### 四項調整：換房間、回到房間、統一畫圖時間、玩家投稿
+- 換房間：`components/room/SwitchRoomButton.tsx` 掛在三種模式的房間頁。輸入新代碼，先用 `GET /api/rooms/:code`（新增）確認房間存在且可加入，再 `leaveRoom()`、沿用同一暱稱 `router.push`；進行中離開會先警告。
+- 你畫我猜整場結束：最終名次停留由 5 秒改為 15 秒（`MATCH_END_PAUSE_SEC`），畫面新增「回到房間」按鈕，任何玩家都可按（`room:cancelAutoRestart` 不再限房主），全房間回到 lobby 調整設定或換玩法。
+- 畫圖時間：`RoomSettings.roundDurationSec` 成為所有模式共用的「畫圖時間」（`lib/shared/drawTime.ts`，15–180 秒，預設 60／60／90）。接龍每棒畫圖、拼圖第一與第二階段畫圖都用它；接龍猜測固定 25 秒、拼圖跨隊猜測固定 30 秒。建房頁的玩法說明文字依所選秒數動態產生。
+- 玩家投稿：`/submit` 投稿頁（首頁導覽與頁尾可進入）。送出前即時比對（`lib/shared/wordMatch.ts`）：完全相同或已在待審 → 擋下；包含關係或編輯距離 1 → 警告，需勾選「確認不一樣」；曾被退回 → 警告並顯示原因。防濫用：honeypot 欄位、每 IP 10 分鐘內 40 次嘗試／8 次成功投稿、待審上限 500 筆。
+- 審核：`/admin` 題庫管理頂端新增「投稿審核」區（待審／已通過／已退回；通過、編輯後通過、退回並附理由）。通過即寫入題庫；通過時若題庫已有相同題目則拒絕。
+- 資料：投稿存 `data/submissions.json`（環境變數 `SUBMISSIONS_FILE` 可覆寫），重啟後保留；已通過的題目啟動時併入題庫。題庫本身的後台編輯仍只存於記憶體。
+- `proxy.ts` matcher 新增 `/api/admin/:path*`。

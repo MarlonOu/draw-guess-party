@@ -9,12 +9,12 @@ import {
   toRoomSummary,
 } from './roomManager';
 import { wordRepository } from '../repository/wordRepository';
-import { TELEPHONE_GUESS_TIMEOUT_SEC, TELEPHONE_DRAWING_TIMEOUT_SEC } from '../shared/telephoneConstants';
+import { TELEPHONE_GUESS_TIMEOUT_SEC } from '../shared/telephoneConstants';
 
 /** 猜測階段限時：只是寫一句話，不需要太久 */
 const GUESS_TIMEOUT_MS = TELEPHONE_GUESS_TIMEOUT_SEC * 1000;
-/** 作畫階段限時：比猜測久，但一樣不能無限等，避免卡住整條接龍 */
-const DRAWING_TIMEOUT_MS = TELEPHONE_DRAWING_TIMEOUT_SEC * 1000;
+/** 作畫階段限時：由房間設定的「畫圖時間」決定（roundDurationSec，見 lib/shared/drawTime.ts），
+ *  在排程當下讀取，不寫死成模組常數 */
 
 /** joinCode -> 目前排程中的逾時計時器（猜測限時或作畫限時），同一房間同時只會有一個 */
 const telephoneTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -77,7 +77,7 @@ export function sendYourTurn(io: Server, room: RoomState): void {
       subPhase: 'drawing',
       promptText,
     });
-    scheduleTimeout(io, room, DRAWING_TIMEOUT_MS);
+    scheduleTimeout(io, room, room.settings.roundDurationSec * 1000);
   }
 }
 

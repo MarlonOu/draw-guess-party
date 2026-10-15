@@ -18,6 +18,14 @@ import { wordRepository } from '../repository/wordRepository';
 const ROUND_END_PAUSE_SEC = 5;
 const ROUND_END_PAUSE_MS = ROUND_END_PAUSE_SEC * 1000;
 
+/**
+ * 整場比賽結束、公布最終名次後的停留秒數。比一般「公布答案」的 5 秒長：
+ * 這段時間裡玩家要看領獎台，也要有機會按下「回到房間」（調整設定／換玩法），
+ * 5 秒太短，還來不及看清楚就自動開下一場了。
+ */
+const MATCH_END_PAUSE_SEC = 15;
+const MATCH_END_PAUSE_MS = MATCH_END_PAUSE_SEC * 1000;
+
 /** 選題限時：固定 5 秒，跟作畫限時（roundDurationSec，房間設定可調）分開計算，
  *  超過沒選就自動保底選一個，確保不會有人一直卡在選題畫面拖時間 */
 const SELECTION_TIMEOUT_MS = 5_000;
@@ -165,12 +173,12 @@ export async function finishMatchAndScheduleRestart(
     const backToLobbyTimer = setTimeout(() => {
       returnToLobby(room);
       io.to(room.joinCode).emit('room:state', toRoomSummary(room));
-    }, ROUND_END_PAUSE_MS);
+    }, MATCH_END_PAUSE_MS);
     roomTimers.set(room.joinCode, backToLobbyTimer);
     return;
   }
 
-  io.to(room.joinCode).emit('game:finished', { nextMatchInSec: ROUND_END_PAUSE_SEC });
+  io.to(room.joinCode).emit('game:finished', { nextMatchInSec: MATCH_END_PAUSE_SEC });
 
   const restartTimer = setTimeout(() => {
     if (countConnectedPlayers(room) < 2) return;
@@ -179,7 +187,7 @@ export async function finishMatchAndScheduleRestart(
     beginGame(room);
     io.to(room.joinCode).emit('room:state', toRoomSummary(room));
     void beginRound(io, room);
-  }, ROUND_END_PAUSE_MS);
+  }, MATCH_END_PAUSE_MS);
   roomTimers.set(room.joinCode, restartTimer);
 }
 

@@ -18,7 +18,7 @@ export interface ClientToServerEvents {
     categoryFilter?: string[];
     difficultyFilter?: string[];
   }) => void;
-  /** 比賽結束畫面，房主選擇「先不要自動開始下一場」，改回 lobby 讓大家調整設定 */
+  /** 比賽結束畫面，任何一位玩家按「回到房間」：取消自動開始下一場，全房間回到 lobby 調整設定 */
   'room:cancelAutoRestart': () => void;
   /** 畫圖者從 round:start 私訊拿到的兩個候選題目中選一個 */
   'round:chooseWord': (payload: { wordId: string }) => void;

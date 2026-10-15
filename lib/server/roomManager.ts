@@ -28,6 +28,7 @@ import {
   computeGuesserPointsByRank,
   DRAWER_POINTS_PER_GUESSER,
 } from '../engine/drawGuessEngine';
+import { clampDrawTime } from '../shared/drawTime';
 
 interface WordOption {
   id: string;
@@ -829,7 +830,8 @@ export interface RoomSettingsPatch {
  *  - 只有房主可以改，不是房主的請求直接拒絕
  *  - 只有房間還在 lobby 階段可以改，比賽進行中或已結束時修改設定沒有意義
  *    （進行中的比賽早就用當初的設定決定好題庫跟輪數了，中途改不會回頭套用）
- *  - roundDurationSec 限制在 15~180 秒之間，避免被亂改成 0 秒或幾小時這種不合理的值
+ *  - roundDurationSec（畫圖時間，三種模式共用，見 lib/shared/drawTime.ts）限制在
+ *    15~180 秒之間，避免被亂改成 0 秒或幾小時這種不合理的值
  *  - telephoneFlow 只有 mode === 'DRAW_TELEPHONE' 才允許修改，其他模式的房間
  *    這個設定沒有意義，直接忽略這個欄位（不報錯，只是不生效），避免非接龍模式
  *    的房間莫名其妙帶著一個永遠用不到的設定被改動
@@ -843,8 +845,7 @@ export function updateRoomSettings(
   if (playerId !== room.hostPlayerId) return false;
 
   if (patch.roundDurationSec !== undefined) {
-    const clamped = Math.min(180, Math.max(15, Math.round(patch.roundDurationSec)));
-    room.settings.roundDurationSec = clamped;
+    room.settings.roundDurationSec = clampDrawTime(patch.roundDurationSec, room.settings.roundDurationSec);
   }
   if (patch.categoryFilter !== undefined) {
     room.settings.categoryFilter = patch.categoryFilter.filter((c) => typeof c === 'string');

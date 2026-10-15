@@ -1,10 +1,12 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BackButton } from '../../components/nav/BackButton';
 import { StatusIcon } from '../../components/room/StatusIcon';
 import { ArtDrawGuess, ArtTelephone, ArtFragment, Star } from '../../components/art/Doodles';
+import { DEFAULT_DRAW_TIME_SEC, DRAW_TIME_OPTIONS, formatDrawTime } from '../../lib/shared/drawTime';
 
 type Mode = 'DRAW_GUESS' | 'DRAW_TELEPHONE' | 'FRAGMENT_DRAW';
 type Tab = 'create' | 'join';
@@ -20,7 +22,11 @@ const DIFFICULTIES: { value: string; label: string }[] = [
   { value: 'HARD', label: '難' },
 ];
 
-const ROUND_DURATIONS = [30, 60, 90, 120];
+const DRAW_TIME_HINT: Record<Mode, string> = {
+  DRAW_GUESS: '畫圖者每一輪的作畫時間（選題另外 5 秒）。',
+  DRAW_TELEPHONE: '每一棒的作畫時間，猜測固定 25 秒。',
+  FRAGMENT_DRAW: '起手與補全各自的作畫時間，猜題固定 30 秒。',
+};
 
 const MODES: {
   key: Mode;
@@ -28,7 +34,8 @@ const MODES: {
   meta: string;
   bg: string;
   art: (p: { live?: boolean }) => React.ReactNode;
-  rules: string[];
+  /** 玩法說明；會隨「畫圖時間」設定動態變動，所以是函式 */
+  rules: (drawSec: number) => string[];
 }[] = [
   {
     key: 'DRAW_GUESS',
@@ -36,9 +43,9 @@ const MODES: {
     meta: '2 人起 · 計分',
     bg: 'var(--amber-soft)',
     art: (p) => <ArtDrawGuess {...p} />,
-    rules: [
+    rules: (sec) => [
       '輪流當畫圖者，其他人在聊天室搶答。',
-      '猜中的人依當下剩餘時間拿 1～10 分，越早猜中分數越高。',
+      `每輪畫圖時間 ${formatDrawTime(sec)}，猜中的人依當下剩餘時間拿 1～10 分，越早猜中分數越高。`,
       '猜對了，畫圖者也跟著加 5 分。',
       '時間到都沒人猜中，這輪雙方都不得分。',
     ],
@@ -49,12 +56,12 @@ const MODES: {
     meta: '3 人起 · 不計分',
     bg: 'var(--pink-soft)',
     art: (p) => <ArtTelephone {...p} />,
-    rules: [
+    rules: (sec) => [
       '至少 3 人才能開始。',
       '第一位隨機拿到題目並開始畫。',
       '之後每一位先猜前一棒畫的是什麼，再畫下自己的猜測。',
       '最後公布原始題目與整條接龍的所有作品。',
-      '猜測限時 25 秒、作畫限時 60 秒，不受「每輪限時」影響。',
+      `猜測限時 25 秒，每一棒的畫圖時間 ${formatDrawTime(sec)}。`,
     ],
   },
   {
@@ -63,11 +70,11 @@ const MODES: {
     meta: '4 人起（偶數）· 組隊',
     bg: 'var(--green-soft)',
     art: (p) => <ArtFragment {...p} />,
-    rules: [
+    rules: (sec) => [
       '兩人一組，至少 4 人且為偶數才能開始。',
-      '每組拿到各自的題目，起手先自由畫滿整個畫布。',
-      '交卷後系統隨機只保留一半，隊友只能在空白那一半補全。',
-      '全部組別畫完後，每個人依自己的節奏猜其他組的作品。',
+      `每組拿到各自的題目，起手先自由畫滿整個畫布（${formatDrawTime(sec)}）。`,
+      `交卷後系統隨機只保留一半，隊友只能在空白那一半補全（同樣 ${formatDrawTime(sec)}）。`,
+      '全部組別畫完後，每個人依自己的節奏猜其他組的作品，每組限時 30 秒。',
       '不計分，純粹娛樂。',
     ],
   },
@@ -96,7 +103,9 @@ function OnlineLobby() {
   });
 
   const [createName, setCreateName] = useState('');
-  const [roundDurationSec, setRoundDurationSec] = useState(60);
+  // null＝沒手動調過，跟著所選玩法的預設值走（切換玩法時預設值會跟著變）
+  const [durationOverride, setDurationOverride] = useState<number | null>(null);
+  const roundDurationSec = durationOverride ?? DEFAULT_DRAW_TIME_SEC[mode];
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
@@ -181,7 +190,7 @@ function OnlineLobby() {
 
   const current = MODES.find((m) => m.key === mode)!;
   const advancedCount =
-    selectedCategories.length + selectedDifficulties.length + (mode === 'DRAW_GUESS' && roundDurationSec !== 60 ? 1 : 0);
+    selectedCategories.length + selectedDifficulties.length + (roundDurationSec !== DEFAULT_DRAW_TIME_SEC[mode] ? 1 : 0);
 
   const errorBox = error && (
     <div id="ol-error" className="dg-notice" role="alert">
@@ -212,7 +221,7 @@ function OnlineLobby() {
               </div>
               <h2 className="ol-preview-name">{current.name}</h2>
               <ul className="ol-rules">
-                {current.rules.map((r) => (
+                {current.rules(roundDurationSec).map((r) => (
                   <li key={r}>{r}</li>
                 ))}
               </ul>
@@ -295,22 +304,23 @@ function OnlineLobby() {
                   </svg>
                 </summary>
                 <div className="ol-adv-body">
-                  {mode === 'DRAW_GUESS' && (
-                    <div className="dg-field">
-                      <span className="dg-label" id="lbl-duration">每輪限時</span>
-                      <div className="ol-chips" role="group" aria-labelledby="lbl-duration">
-                        {ROUND_DURATIONS.map((sec) => (
-                          <button key={sec} type="button" className="dg-chip" aria-pressed={roundDurationSec === sec} onClick={() => setRoundDurationSec(sec)}>
-                            {sec} 秒
-                          </button>
-                        ))}
-                      </div>
+                  <div className="dg-field">
+                    <span className="dg-label" id="lbl-duration">畫圖時間</span>
+                    <p className="dg-hint">{DRAW_TIME_HINT[mode]}</p>
+                    <div className="ol-chips" role="group" aria-labelledby="lbl-duration">
+                      {DRAW_TIME_OPTIONS.map((sec) => (
+                        <button key={sec} type="button" className="dg-chip" aria-pressed={roundDurationSec === sec} onClick={() => setDurationOverride(sec)}>
+                          {formatDrawTime(sec)}
+                        </button>
+                      ))}
                     </div>
-                  )}
+                  </div>
 
                   <div className="dg-field">
                     <span className="dg-label" id="lbl-cat">分類</span>
-                    <p className="dg-hint">不選代表全部分類都會出現。</p>
+                    <p className="dg-hint">
+                      不選代表全部分類都會出現。想加新題目？<Link href="/submit">投稿題目</Link>
+                    </p>
                     <div className="ol-chips" role="group" aria-labelledby="lbl-cat">
                       {categories.length === 0 && <span className="dg-hint">題庫目前沒有分類</span>}
                       {categories.map((cat) => (

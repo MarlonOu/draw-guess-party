@@ -14,13 +14,11 @@ import {
 } from './roomManager';
 import { wordRepository } from '../repository/wordRepository';
 import {
-  FRAGMENT_DRAWING1_TIMEOUT_SEC,
-  FRAGMENT_DRAWING2_TIMEOUT_SEC,
   FRAGMENT_GUESS_TIMEOUT_SEC,
 } from '../shared/fragmentConstants';
 
-const DRAWING1_TIMEOUT_MS = FRAGMENT_DRAWING1_TIMEOUT_SEC * 1000;
-const DRAWING2_TIMEOUT_MS = FRAGMENT_DRAWING2_TIMEOUT_SEC * 1000;
+/** 起手、補全兩段畫圖時間相同，由房間設定的「畫圖時間」決定（見 lib/shared/drawTime.ts） */
+const drawingTimeoutMs = (room: RoomState) => room.settings.roundDurationSec * 1000;
 const GUESS_TIMEOUT_MS = FRAGMENT_GUESS_TIMEOUT_SEC * 1000;
 
 /**
@@ -115,7 +113,7 @@ export function sendFragmentDrawing1Turn(io: Server, room: RoomState, teamId: st
   clearTeamDrawingTimer(room.joinCode, teamId);
   const timer = setTimeout(() => {
     handleFragmentDrawing1Timeout(io, room, teamId);
-  }, DRAWING1_TIMEOUT_MS);
+  }, drawingTimeoutMs(room));
   teamDrawingTimers.set(teamTimerKey(room.joinCode, teamId), timer);
 }
 
@@ -155,7 +153,7 @@ export function sendFragmentDrawing2Turn(io: Server, room: RoomState, teamId: st
   clearTeamDrawingTimer(room.joinCode, teamId);
   const timer = setTimeout(() => {
     handleFragmentDrawing2Timeout(io, room, teamId);
-  }, DRAWING2_TIMEOUT_MS);
+  }, drawingTimeoutMs(room));
   teamDrawingTimers.set(teamTimerKey(room.joinCode, teamId), timer);
 }
 
