@@ -9,6 +9,9 @@ import '@fontsource/iansui';
 import './design.css';
 import './pages.css';
 import './globals.css';
+import { ClientLogProvider } from '../components/feedback/ClientLogProvider';
+import { ReportLauncher } from '../components/feedback/ReportLauncher';
+import { MobileScrollbar } from '../components/nav/MobileScrollbar';
 
 export const metadata: Metadata = {
   // OG／Twitter 圖片需要絕對網址；正式站網域可用 NEXT_PUBLIC_SITE_URL 覆寫
@@ -41,6 +44,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           跳到主要內容
         </a>
         {children}
+        <ClientLogProvider />
+        <ReportLauncher />
+        <MobileScrollbar />
       </body>
     </html>
   );

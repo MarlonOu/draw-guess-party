@@ -13,6 +13,7 @@ import { StatusOverlay } from '../../../../components/room/StatusOverlay';
 import { StatusIcon } from '../../../../components/room/StatusIcon';
 import { RoomSettingsPanel } from '../../../../components/room/RoomSettingsPanel';
 import { SwitchRoomButton } from '../../../../components/room/SwitchRoomButton';
+import { ReportButton } from '../../../../components/feedback/ReportButton';
 import { SoundToggleButton } from '../../../../components/room/SoundToggleButton';
 import { TelephoneRoomView } from '../../../../components/room/TelephoneRoomView';
 import { FragmentRoomView } from '../../../../components/room/FragmentRoomView';
@@ -387,6 +388,7 @@ export default function RoomPage({ params }: { params: Promise<{ joinCode: strin
         )}
         <div style={{ flex: 1, minWidth: 8 }} />
         <SwitchRoomButton joinCode={room.joinCode} status={room.status} leaveRoom={leaveRoom} />
+        <ReportButton variant="icon" />
         <SoundToggleButton />
       </div>
 

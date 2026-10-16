@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { WordBankEntry, WordDifficulty } from '../../lib/types/word';
 import { BackButton } from '../../components/nav/BackButton';
 import { SubmissionReview } from '../../components/admin/SubmissionReview';
+import { BugReportReview } from '../../components/admin/BugReportReview';
 
 const DIFFICULTY_LABEL: Record<WordDifficulty, string> = {
   EASY: '易',
@@ -326,6 +327,9 @@ export default function AdminWordsPage() {
           </div>
         )}
       </section>
+
+      {/* 玩家回報的錯誤（含自動附上的操作紀錄），放在最下方 */}
+      <BugReportReview />
     </main>
   );
 }

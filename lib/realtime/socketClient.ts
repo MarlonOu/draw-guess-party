@@ -2,6 +2,7 @@
 
 import { io, type Socket } from 'socket.io-client';
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/events';
+import { attachSocketLog } from '../client/clientLog';
 
 export type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -14,6 +15,8 @@ let socket: AppSocket | null = null;
 export function getSocket(): AppSocket {
   if (!socket) {
     socket = io({ autoConnect: true });
+    // 連線與事件名稱寫進操作紀錄（隨錯誤回報一併送出；不含事件內容）
+    attachSocketLog(socket as unknown as Parameters<typeof attachSocketLog>[0]);
   }
   return socket;
 }

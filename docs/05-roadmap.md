@@ -926,3 +926,11 @@
 - 審核：`/admin` 題庫管理頂端新增「投稿審核」區（待審／已通過／已退回；通過、編輯後通過、退回並附理由）。通過即寫入題庫；通過時若題庫已有相同題目則拒絕。
 - 資料：投稿存 `data/submissions.json`（環境變數 `SUBMISSIONS_FILE` 可覆寫），重啟後保留；已通過的題目啟動時併入題庫。題庫本身的後台編輯仍只存於記憶體。
 - `proxy.ts` matcher 新增 `/api/admin/:path*`。
+
+
+### 錯誤回報與手機捲軸
+- 回報入口：`components/feedback/ReportButton.tsx`（彈窗：問題類型、描述、選填聯絡方式、蜜罐欄位；成功顯示編號）。全站左下角浮動按鈕由 `ReportLauncher` 掛在根 layout；房間頁（會蓋到畫布）改在標題列放圖示按鈕；`app/error.tsx` 的錯誤頁有「回報這個錯誤」並預填錯誤訊息；管理後台不顯示。
+- 隱藏附帶的紀錄：`lib/client/clientLog.ts` 常駐收集最近 300 筆（點擊、換頁、fetch 方法／路徑／狀態／耗時、socket 事件名稱與 room:state 摘要、console error/warn、window error、unhandledrejection、分頁前後景、網路上下線、視窗大小），同一分頁以 sessionStorage 保留（重新整理不丟）。**不記錄輸入內容**（輸入框值、聊天、猜測文字、暱稱）；Next.js 預取與回報請求本身不記。彈窗內有可展開的預覽，玩家看得到會附上什麼。
+- 伺服器：`POST /api/bug-reports`（公開；請求上限約 160KB；每 IP 10 分鐘 5 筆成功／20 次嘗試；儲存上限 1000 筆，滿了先淘汰最舊的已解決／不處理）。從回報網址解析房間代碼，附上伺服器端房間快照（模式、狀態、人數、輪次、畫圖秒數）。資料存 `data/bug-reports.json`（環境變數 `REPORTS_FILE` 可覆寫），重啟保留。
+- 後台：題庫管理最下方「錯誤回報」區（`BugReportReview`）：未處理／處理中／已解決／不處理分頁、裝置摘要、展開看完整環境與操作紀錄（依類型上色）、改狀態、備註、複製全部、刪除。API 為 `/api/admin/reports`（列表不含 log）與 `/api/admin/reports/[id]`，受既有 `/api/admin/:path*` Basic Auth 保護。
+- 手機捲軸：`components/nav/MobileScrollbar.tsx`，寬度 ≤820px 或觸控裝置才顯示，頁面比視窗長超過 60px 才出現。常駐在右側（平常半透明、捲動或拖曳時變明顯），可按住滑塊拖曳，點軌道空白處翻一頁，鍵盤方向鍵／PageUp／PageDown／Home／End 可操作，載入時閃動兩次提示。房間頁因為右緣要留給畫布，軌道空白處不攔截觸控，只有滑塊本身可操作。

@@ -12,6 +12,7 @@ import { RoomTicket } from './RoomTicket';
 import { StatusOverlay } from './StatusOverlay';
 import { RoomSettingsPanel } from './RoomSettingsPanel';
 import { SwitchRoomButton } from './SwitchRoomButton';
+import { ReportButton } from '../feedback/ReportButton';
 import { SoundToggleButton } from './SoundToggleButton';
 import { RoundTimer } from './RoundTimer';
 import { TELEPHONE_GUESS_TIMEOUT_SEC } from '../../lib/shared/telephoneConstants';
@@ -167,6 +168,7 @@ export function TelephoneRoomView({
         )}
         <div style={{ flex: 1, minWidth: 8 }} />
         <SwitchRoomButton joinCode={room.joinCode} status={room.status} leaveRoom={leaveRoom} />
+        <ReportButton variant="icon" />
         <SoundToggleButton />
       </div>
 
