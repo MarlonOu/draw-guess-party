@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSocket } from './socketClient';
-import type { RoomSummary, TelephoneReveal, FragmentReveal, FragmentSplitOrientation, FragmentHalf } from '../types/room';
+import type { GameMode, RoomSummary, TelephoneReveal, FragmentReveal, FragmentSplitOrientation, FragmentHalf } from '../types/room';
 import type { GuessMessage } from '../types/round';
 import type { WordOption } from '../types/events';
 import type { Stroke } from '../types/stroke';
@@ -316,6 +316,7 @@ export function useRoomSocket() {
 
   const updateSettings = useCallback(
     (patch: {
+      mode?: GameMode;
       roundDurationSec?: number;
       categoryFilter?: string[];
       difficultyFilter?: string[];

@@ -1,4 +1,4 @@
-import type { RoomPlayer, RoomSummary, TelephoneReveal, FragmentReveal, FragmentSplitOrientation, FragmentHalf } from './room';
+import type { GameMode, RoomPlayer, RoomSummary, TelephoneReveal, FragmentReveal, FragmentSplitOrientation, FragmentHalf } from './room';
 import type { Stroke, StrokePoint } from './stroke';
 import type { GuessMessage } from './round';
 
@@ -14,9 +14,12 @@ export interface ClientToServerEvents {
   'room:start': () => void;
   /** 只有房主的請求會生效，其他人的請求伺服器直接忽略（不特別回錯誤，避免洩漏誰是房主的猜測空間有意義的訊號） */
   'room:updateSettings': (payload: {
+    /** 換玩法：只有房主、房間在 lobby 時生效 */
+    mode?: GameMode;
     roundDurationSec?: number;
     categoryFilter?: string[];
     difficultyFilter?: string[];
+    telephoneFlow?: 'combined' | 'alternating';
   }) => void;
   /** 比賽結束畫面，任何一位玩家按「回到房間」：取消自動開始下一場，全房間回到 lobby 調整設定 */
   'room:cancelAutoRestart': () => void;

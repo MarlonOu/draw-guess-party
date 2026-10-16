@@ -2129,34 +2129,6 @@
   height: 1px;
   opacity: 0;
 }
-.rp-attach {
-  padding: 8px 12px;
-  background: var(--paper-dim);
-  border: 2px dashed var(--ink);
-  border-radius: 12px;
-}
-.rp-attach summary {
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-.rp-attach .dg-hint {
-  margin-top: 8px;
-}
-.rp-log {
-  max-height: 160px;
-  margin-top: 8px;
-  padding: 8px;
-  overflow: auto;
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 0.72rem;
-  line-height: 1.45;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  background: var(--paper);
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
-}
 
 /* ======================================================== 後台：錯誤回報 ===== */
 .adm-rep {

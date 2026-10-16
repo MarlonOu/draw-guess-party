@@ -28,6 +28,17 @@ const DRAW_TIME_HINT: Record<GameMode, string> = {
   DRAW_TELEPHONE: '每一棒的作畫時間（猜測固定 25 秒）',
   FRAGMENT_DRAW: '起手與補全各自的作畫時間（猜題固定 30 秒）',
 };
+/** 換玩法選單：名稱與開局條件（人數） */
+const MODE_OPTIONS: { value: GameMode; label: string; need: string }[] = [
+  { value: 'DRAW_GUESS', label: '你畫我猜', need: '2 人起・輪流畫、其他人猜，會計分' },
+  { value: 'DRAW_TELEPHONE', label: '畫圖接龍', need: '3 人起・一棒傳一棒，不計分' },
+  { value: 'FRAGMENT_DRAW', label: '拼圖接畫', need: '4 人起且為偶數・兩人一組接力畫，不計分' },
+];
+const MODE_NAME: Record<GameMode, string> = {
+  DRAW_GUESS: '你畫我猜',
+  DRAW_TELEPHONE: '畫圖接龍',
+  FRAGMENT_DRAW: '拼圖接畫',
+};
 const DIFFICULTIES: { value: string; label: string }[] = [
   { value: 'EASY', label: '易' },
   { value: 'MEDIUM', label: '中' },
@@ -91,6 +102,7 @@ export function RoomSettingsPanel({
     return (
       <p style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'left' }}>
         目前設定：
+        {settings.mode && `玩法 ${MODE_NAME[settings.mode]}（房主可以更換）／`}
         {showRoundDuration && `畫圖 ${formatDrawTime(settings.roundDurationSec)}／`}
         分類 {categoryText}／難度 {difficultyText}
         {showTelephoneFlow && `／流程 ${telephoneFlowText}`}
@@ -116,6 +128,20 @@ export function RoomSettingsPanel({
     <div
       className="dg-card rm-settings"
     >
+      {settings.mode && (
+        <div style={{ width: '100%' }}>
+          <SectionLabel>玩法（同一個房間可以換）</SectionLabel>
+          <div className="rm-set-chips" role="group" aria-label="更換玩法">
+            {MODE_OPTIONS.map((m) => (
+              <Chip key={m.value} active={settings.mode === m.value} onClick={() => settings.mode !== m.value && onUpdate({ mode: m.value })} compact>
+                {m.label}
+              </Chip>
+            ))}
+          </div>
+          <p className="dg-hint rm-set-hint">{MODE_OPTIONS.find((m) => m.value === settings.mode)?.need}</p>
+        </div>
+      )}
+
       {showTelephoneFlow && (
         <div style={{ width: '100%' }}>
           <SectionLabel>接龍流程</SectionLabel>

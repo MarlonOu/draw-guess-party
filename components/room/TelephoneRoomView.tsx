@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { RoomSummary, TelephoneReveal } from '../../lib/types/room';
+import type { GameMode, RoomSummary, TelephoneReveal } from '../../lib/types/room';
 import type { Stroke } from '../../lib/types/stroke';
 import { DrawingCanvas, type DrawingCanvasHandle } from '../canvas/DrawingCanvas';
 import { Toolbar } from '../canvas/Toolbar';
@@ -29,6 +29,7 @@ interface TelephoneRoomViewProps {
   leaveRoom: () => void;
   startGame: () => void;
   updateSettings: (patch: {
+    mode?: GameMode;
     roundDurationSec?: number;
     categoryFilter?: string[];
     difficultyFilter?: string[];

@@ -31,12 +31,6 @@ function FlagIcon() {
   );
 }
 
-function formatClock(t: number): string {
-  const d = new Date(t);
-  const p = (n: number, w = 2) => String(n).padStart(w, '0');
-  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-
 type Phase = 'form' | 'sending' | 'done';
 
 /**
@@ -56,8 +50,6 @@ export function ReportButton({ variant = 'fab', prefill, label = '回報問題' 
   const [phase, setPhase] = useState<Phase>('form');
   const [error, setError] = useState<string | null>(null);
   const [reportId, setReportId] = useState('');
-  const [logCount, setLogCount] = useState(0);
-  const [preview, setPreview] = useState<string[]>([]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -75,9 +67,6 @@ export function ReportButton({ variant = 'fab', prefill, label = '回報問題' 
   }, [phase]);
 
   const open = () => {
-    const logs = getLogs();
-    setLogCount(logs.length);
-    setPreview(logs.slice(-40).map((l) => `${formatClock(l.t)} [${l.k}] ${l.m}`));
     setError(null);
     if (phase === 'done') setPhase('form');
     dialogRef.current?.showModal();
@@ -201,13 +190,7 @@ export function ReportButton({ variant = 'fab', prefill, label = '回報問題' 
             {/* 蜜罐：真人看不到 */}
             <input type="text" name="website" value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" className="rp-honey" />
 
-            <details className="rp-attach">
-              <summary>
-                會一併附上最近 {logCount} 筆操作紀錄與裝置資訊
-              </summary>
-              <p className="dg-hint">只記錄「做了什麼」（點了哪個按鈕、系統事件、錯誤訊息），不包含你輸入的文字內容。</p>
-              <pre className="rp-log" tabIndex={0} aria-label="將附上的操作紀錄預覽">{preview.length ? preview.join('\n') : '（目前沒有紀錄）'}</pre>
-            </details>
+            <p className="dg-hint">送出時會自動附上裝置資訊與最近的操作紀錄，協助我們重現問題。</p>
 
             {error && (
               <p id={errId} className="rm-dialog-error" role="alert">

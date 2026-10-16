@@ -1,4 +1,5 @@
 import type {
+  GameMode,
   RoomPlayer,
   RoomSettings,
   RoomSummary,
@@ -28,7 +29,7 @@ import {
   computeGuesserPointsByRank,
   DRAWER_POINTS_PER_GUESSER,
 } from '../engine/drawGuessEngine';
-import { clampDrawTime } from '../shared/drawTime';
+import { clampDrawTime, DEFAULT_DRAW_TIME_SEC } from '../shared/drawTime';
 
 interface WordOption {
   id: string;
@@ -815,7 +816,11 @@ export function returnToLobby(room: RoomState): void {
   }
 }
 
+export const GAME_MODES: readonly GameMode[] = ['DRAW_GUESS', 'DRAW_TELEPHONE', 'FRAGMENT_DRAW'];
+
 export interface RoomSettingsPatch {
+  /** 在同一個房間換玩法（只有房主、只有 lobby 階段） */
+  mode?: GameMode;
   roundDurationSec?: number;
   categoryFilter?: string[];
   difficultyFilter?: string[];
@@ -844,6 +849,10 @@ export function updateRoomSettings(
   if (room.status !== 'lobby') return false;
   if (playerId !== room.hostPlayerId) return false;
 
+  // 換玩法要先處理：同一個請求裡的其他欄位（例如畫圖時間）要套在「新模式」上
+  if (patch.mode !== undefined && GAME_MODES.includes(patch.mode) && patch.mode !== room.settings.mode) {
+    switchRoomMode(room, patch.mode);
+  }
   if (patch.roundDurationSec !== undefined) {
     room.settings.roundDurationSec = clampDrawTime(patch.roundDurationSec, room.settings.roundDurationSec);
   }
@@ -857,6 +866,31 @@ export function updateRoomSettings(
     room.settings.telephoneFlow = patch.telephoneFlow === 'alternating' ? 'alternating' : 'combined';
   }
   return true;
+}
+
+/**
+ * 在同一個房間換玩法（呼叫端已確認是房主、房間在 lobby）。
+ *  - 玩家、分數（lobby 本來就是 0）、房主、分類與難度篩選全部保留，不需要大家重新加入
+ *  - 畫圖時間：如果房主沒調過（等於舊模式的預設值），跟著換成新模式的預設
+ *    （接龍 60、拼圖 90）；調過的自訂值保留
+ *  - 拼圖接畫需要「兩人一組」的分組：換進來時依目前所有玩家的順序重新分組
+ *    （跟新玩家加入時一樣，填進人數未滿的第一組）；換離開時清掉分組資料
+ *  - 其他模式專用狀態（接龍流程）保持原值，下次換回接龍時還是房主上次的選擇
+ */
+function switchRoomMode(room: RoomState, mode: GameMode): void {
+  const previous = room.settings.mode;
+  room.settings.mode = mode;
+
+  if (room.settings.roundDurationSec === DEFAULT_DRAW_TIME_SEC[previous]) {
+    room.settings.roundDurationSec = DEFAULT_DRAW_TIME_SEC[mode];
+  }
+
+  room.fragmentTeamAssignment = new Map();
+  if (mode === 'FRAGMENT_DRAW') {
+    for (const playerId of room.players.keys()) {
+      room.fragmentTeamAssignment.set(playerId, findFirstAvailableTeamNumber(room.fragmentTeamAssignment));
+    }
+  }
 }
 
 export function findRoomBySocketId(

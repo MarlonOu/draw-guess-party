@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { RoomSummary, FragmentReveal, FragmentSplitOrientation, FragmentHalf } from '../../lib/types/room';
+import type { GameMode, RoomSummary, FragmentReveal, FragmentSplitOrientation, FragmentHalf } from '../../lib/types/room';
 import type { Stroke } from '../../lib/types/stroke';
 import { FragmentCanvas } from '../canvas/FragmentCanvas';
 import { StrokeReplay } from '../canvas/StrokeReplay';
@@ -57,7 +57,7 @@ interface FragmentRoomViewProps {
   reveal: FragmentReveal | null;
   leaveRoom: () => void;
   startGame: () => void;
-  updateSettings: (patch: { roundDurationSec?: number; categoryFilter?: string[]; difficultyFilter?: string[] }) => void;
+  updateSettings: (patch: { mode?: GameMode; roundDurationSec?: number; categoryFilter?: string[]; difficultyFilter?: string[] }) => void;
   voteReadyForNextRound: () => void;
   setOrientation: (orientation: FragmentSplitOrientation) => void;
   submitDrawing1: () => void;
